@@ -57,6 +57,7 @@ radio.
 
 | Document | Description |
 |----------|-------------|
+| [Firmware Summary](docs/firmware-summary.html) | Full analysis: memory layout, subsystem inventory, tone tables, IARU presets, DMR layer, GPS, encryption, Ghidra results, coverage assessment |
 | [HR_C7000 Reference Tables](docs/firmware-c7000-reference.html) | Memory map, PIC interrupts, baseband sub-interrupts, IO pin mux, boot flow |
 | [HR_C7000 BGA Pinmap](docs/firmware-c7000-pinmap.html) | Full pin map with JTAG, UART0, SPI, USB, power pins identified |
 | [Menu Dispatcher Architecture](docs/firmware-dispatcher-architecture.html) | How the menu pointer table dispatches to ROM-resident handlers |
