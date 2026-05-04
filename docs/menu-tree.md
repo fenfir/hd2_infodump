@@ -23,11 +23,28 @@ manual, the top is structured as:
 
 ```
 Top
-├─ Band A Set       (channel-screen settings for Band A)
-├─ Band B Set       (channel-screen settings for Band B)
-├─ Main Set         (32 radio-wide settings — all surfaced via segment 4 of the firmware menu table from index 23 onwards)
-└─ Other Functions  (sub-menu — segment 7 of the firmware menu table)
+├─ Band A Set       Band A Set                        ← (channel screen, Band A)
+├─ Band B Set       Band B Set                        ← (channel screen, Band B)
+├─ Main Set         整机设置 (whole-machine settings)   ← 32 radio-wide settings (segment 4 from index 23+)
+└─ Other Functions  (sub-menu — segment 7 of firmware menu table)
+   ├─ 短信 / Message
+   ├─ 呼叫记录 / Call Log
+   ├─ 联系人 / Contacts (priority contacts list)
+   ├─ 通信录 / (also Contacts; "address book" — possibly the b1=0x31 region table)
+   ├─ 对讲机号码 / Radio ID (lit. "walkie-talkie number")
+   ├─ 收音机 / FM Radio (lit. "radio receiver")
+   ├─ GPS / 本地GPS (Local GPS) / 接收GPS (Receive GPS)
+   ├─ Encryption / 加密
+   └─ 版本信息 / Version Info
 ```
+
+**Two Chinese terms for "Contacts":** the radio uses both `联系人`
+(contact-person, used in Add/Delete operations) and `通信录` (lit.
+"address book / communications directory", used as a top-menu label).
+The codeplug has two corresponding tables (Priority Contacts at
+`0x1B84`, Address Book at `b1=0x31` block `0x0000` — see `records.md`),
+suggesting the two terms map to the two tables. Verified at v208 menu
+pool offsets: `联系人` @ `0x06e59c`, `通信录` @ `0x06e9fc`.
 
 ### Other Functions (segment 7)
 
@@ -94,7 +111,7 @@ flag bytes — see `settings.md` for bit-level details.
 |16 | Key Beep         | OFF / ON                          | S:0x2977 b7 | `Key Beep`       |
 |17 | Key Lock         | Manual / Auto                     | S:0x2971 b2 | `Key Lock`       |
 |18 | Lock Mode        | Key / Key+CH / Key+CH+PTT         | S:0x299F b6:5 | `Lock Mode`    |
-|19 | CH-Mode          | Frequency / Name / CH (Channel)   | S:0x2978 b5,0 | `CH-Mode`      |
+|19 | CH-Mode          | Frequency / Name / CH (Channel) — 信道显示模式 | S:0x2978 b5,0 | `CH-Mode`      |
 |20 | S/D Mode         | Single / Dual band                | S:0x299D b2 | `S/D Mode`       |
 |21 | Scan Mode        | TO (Time) / CO (Carrier) / SE (Search) | S:0x2973 b1:0 | `Scan Mode` |
 |22 | Save CH          | (action — store current as CH)    | runtime    | `Save CH`         |
@@ -180,14 +197,14 @@ Firmware menu surfaces these across two segments:
 | 7 | VOX        | OFF / ON                          | Ch+0x20 b5  | 7      |
 | 8 | Vox Level  | 1..9                              | Ch+0x20 b3:0 | 8     |
 | 9 | W/N        | Narrow / Wide                     | Ch+0x29 b6  | 12     |
-|10 | TOT        | OFF / 15s / 30s / 45s / 60s / 75s / 90s / 120s | Ch+0x23 | 6 |
+|10 | TOT        | OFF / 15s / 30s / 45s / 60s / 75s / 90s / 120s — 发射限时 | Ch+0x23 | 6 |
 |11 | DTMF Signal | 1..128 (index into DTMF Encode Table) + enable bit | Ch+0x10 b6:0, Ch+0x11 b2 | 71 |
 |12 | C-CDC      | sub-menu — see [CTCSS / DCS](#ctcss--dcs-tone-tables) | Ch+0x24..+0x27 | 13,14 |
 |13 | R-CDC      | (Rx side of C-CDC; same options)  | Ch+0x24..+0x25 | 13   |
 |14 | T-CDC      | (Tx side of C-CDC; same options)  | Ch+0x26..+0x27 | 14   |
 |15 | Ch.Name    | text editor (10 chars; abc/ABC/123) | Ch+0x04 (10 B) | 2 |
 |16 | Busy Lock  | sub-menu — see [Busy Lock / Tx Authority](#busy-lock--tx-authority) | Ch+0x29 b5:4 (analog), Ch+0x2B b7:6 (digital) | 15, 25 |
-|17 | Shift Up   | Plus / Minus (offset direction)   | (unmapped)  | —      |
+|17 | Shift Up   | Plus / Minus (offset direction) — 频差方向 | (unmapped)  | —      |
 |18 | Shift Freq | 0.0..99.0 MHz                     | S:0x2985 (3 B BCD, global) | — |
 |19 | Color Code | 0..15                             | Ch+0x2A high nibble | 20 |
 |20 | Encrypt Type | OFF / Normal / Enhanced / ARC4 / AES128 / AES256 | Ch+0x28 b6:5 + Ch+0x11 b4:3 | 22 |
@@ -199,7 +216,7 @@ Firmware menu surfaces these across two segments:
 |26 | Radio ID   | (selects from Radio ID table 0..31) | S:0x29A3 (global active idx) | 19 |
 |27 | Contacts   | (DMR ID — references contact)     | Ch+0x1C (4 B LE) | 28 |
 |28 | GPS contacts | (1-based index into Priority Contacts) | Ch+0x12 | 68 |
-|29 | Rx List    | inline contact list               | Ch+0x30..0xAF (~32 entries) | 29 |
+|29 | Rx List    | inline contact list — 接收列表    | Ch+0x30..0xAF (~32 entries) | 29 |
 
 ### Busy Lock / Tx Authority
 
@@ -243,7 +260,7 @@ Manual "Other Functions → Message". Each item is a sub-screen.
 
 | # | Item        | Storage                                |
 |---|-------------|----------------------------------------|
-| 1 | Inbox       | runtime / DMR data layer (not codeplug) |
+| 1 | Inbox       | runtime / DMR data layer (not codeplug) — 收件箱 |
 | 2 | Write       | (editor; max ~199 chars)               |
 | 3 | Sent Items  | runtime                                |
 | 4 | Quick Text  | `table_1dfx` block 0x1DF8+0xDC, 200 B × 16 slots |
@@ -273,25 +290,55 @@ Per-entry actions (firmware segments 4 + 5 of menu pointer table):
 
 ## Contacts
 
-Manual "Contact: priority contact" — up to 5000 priority contacts.
-Stored at radio block `0x1B84` onwards (`b1=0x31` region; see
-`records.md`).
+Manual "Contact: priority contact" — up to 5000 priority contacts
+plus the address-book table. Both share the same 72-byte record layout
+(`records.md`).
 
-Sub-menu (firmware segment-7 entries surfaced from the contact-detail
-screen):
+### On-radio editor (firmware segment-7 entries)
 
-| Item            | Action                                  |
-|-----------------|-----------------------------------------|
-| Edit ID         | enter DMR ID (max 16777215 = 0xFFFFFF)  |
-| Contact Type    | Group / Private / All                    |
-| ID Name         | text editor (16 chars; abc/ABC/123)      |
-| Add Contacts    | new entry                                |
-| Del Contacts    | remove entry                             |
+| Item            | Action                                       | Edits record byte |
+|-----------------|----------------------------------------------|-------------------|
+| Edit ID         | enter DMR ID (max 16777215 = 0xFFFFFF)       | `+0x00..+0x03`    |
+| Contact Type    | Group / Private / All                         | `+0x04`           |
+| ID Name         | text editor (16 chars; abc/ABC/123)           | `+0x05..+0x14`    |
+| Add Contacts    | new entry                                    | (allocates record) |
+| Del Contacts    | remove entry                                 | (clears record)    |
 
-Entry format (72 bytes per record, see `records.md`):
-- DMR ID (4 B LE)
-- Type byte: `0x04`=Group, `0x05`=Private, `0x06`=All
-- Name (16 B), City (16 B), Province (16 B), Country (16 B)
+### Full record layout (72 bytes per contact)
+
+```
++0x00   4 B   DMR ID            (LE uint32; 0xFFFFFFFF = "all call" for Priority)
++0x04   1 B   type              (0x04=Group, 0x05=Private, 0x06=All)
++0x05  16 B   Name              ← only field the radio menu displays/edits
++0x15  16 B   City              ┐
++0x25  16 B   Province / State  │ CPS-only fields. The radio menu does
++0x35  16 B   Country           │ NOT surface these for view or edit, but
++0x45   3 B   0xFF terminator   ┘ they ride along in the codeplug record.
+```
+
+City / Province / Country are **CPS-only metadata** — the radio's
+contact detail screen and the in-radio editor expose only Name + ID +
+Type. The CPS Windows app provides full edit access to all fields. If
+you populate City/Province/Country via the CPS, they round-trip
+through the codeplug correctly but won't appear on the radio's LCD.
+
+### Display only — call-log "Detail" view
+
+When viewing a call from the Call Log, the **Detail** sub-action
+(`firmware segment 4 / 5 entry "Detail"`) shows:
+
+- Caller's DMR ID — labelled `Priva ID:` (private call) /
+  `Group ID:` (group call) / `All call:` (all-call)
+- Caller's Name (looked up from address book or priority contacts)
+- Timestamp / duration
+
+The radio renders the ID with one of three prefix labels at v208 rodata:
+
+| Call kind     | Prefix label | Offset      |
+|---------------|--------------|-------------|
+| Private call  | `Priva ID:`  | `0x06ef4c`  |
+| Group call    | `Group ID:`  | `0x06ef58`  |
+| All-call      | `All call:`  | `0x06ef64`  |
 
 ---
 

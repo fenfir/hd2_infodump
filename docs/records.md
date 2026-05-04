@@ -22,9 +22,30 @@ The labels `Group` / `Private` / `All` are at v208 menu pool offsets
 detail screen). The Chinese counterparts are 增加联系人 (Add Contact)
 and 删除联系人 (Delete Contact) per the contact-management menu.
 
-The city/province/country fields are CPS-side metadata — they ride along
-in the codeplug but the firmware menu only displays `name` on contact
-selection. Treating them as opaque ASCII for round-trip is sufficient.
+### Per-field editor and display surface
+
+The 72-byte record carries **four** name fields, but the radio surfaces
+only the first one. Use this table to know what's editable from the
+radio's keypad versus CPS-only.
+
+| Offset | Field    | Bytes | Editable on radio | Displayed on radio | CPS edit |
+|--------|----------|-------|-------------------|--------------------|----------|
+| `+0x00`| DMR ID   | 4     | ✓ (Edit ID)       | ✓ (`Priva/Group/All call:` prefix) | ✓ |
+| `+0x04`| Type     | 1     | ✓ (Group/Private/All toggle) | ✓ (icon)  | ✓ |
+| `+0x05`| Name     | 16    | ✓ (ID Name editor; abc/ABC/123 modes) | ✓ (call screen) | ✓ |
+| `+0x15`| City     | 16    | ✗                 | ✗                  | ✓ |
+| `+0x25`| Province | 16    | ✗                 | ✗                  | ✓ |
+| `+0x35`| Country  | 16    | ✗                 | ✗                  | ✓ |
+
+City / Province / Country are CPS-only metadata; firmware string
+search confirms no `City` / `Province` / `Country` labels exist in the
+v208 rodata — the radio firmware never surfaces these fields. They
+round-trip through the codeplug correctly so a CPS-edited record
+keeps its address data intact across radio dump → re-write cycles.
+
+For round-trip codeplug work: treat all four as opaque 16-byte ASCII
+fields, null-pad blank entries (the CPS uses 0x00 padding for empty;
+not 0xFF — see `0x06d9c4` test data).
 
 ## Address Book @ radio b1=0x31 block `0x0000` (`addr_book` region)
 
