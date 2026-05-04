@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  {% seo %}
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="{{ '/' | relative_url }}">HD2 Infodump</a>
+      <div class="nav-links">
+        <div class="nav-dropdown">
+          <button class="nav-dropbtn">Codeplug Docs</button>
+          <div class="nav-dropdown-content">
+            <a href="{{ '/docs/protocol' | relative_url }}">Wire Protocol</a>
+            <a href="{{ '/docs/address-space' | relative_url }}">Address Space</a>
+            <a href="{{ '/docs/channels' | relative_url }}">Channel Format</a>
+            <a href="{{ '/docs/records' | relative_url }}">Records</a>
+            <a href="{{ '/docs/settings' | relative_url }}">Settings</a>
+            <a href="{{ '/docs/menu-tree' | relative_url }}">Menu Tree</a>
+            <a href="{{ '/docs/cps-csv-format' | relative_url }}">CPS CSV Format</a>
+            <a href="{{ '/docs/fw_update' | relative_url }}">Firmware Update</a>
+            <a href="{{ '/docs/diff-tests' | relative_url }}">Diff Tests</a>
+            <a href="{{ '/docs/NOTES' | relative_url }}">NOTES</a>
+          </div>
+        </div>
+        <div class="nav-dropdown">
+          <button class="nav-dropbtn">Firmware RE</button>
+          <div class="nav-dropdown-content">
+            <a href="{{ '/docs/firmware-summary' | relative_url }}">Firmware Summary</a>
+            <a href="{{ '/docs/firmware-c7000-reference' | relative_url }}">HR_C7000 Reference</a>
+            <a href="{{ '/docs/firmware-c7000-pinmap' | relative_url }}">HR_C7000 Pinmap</a>
+            <a href="{{ '/docs/firmware-dispatcher-architecture' | relative_url }}">Dispatcher Architecture</a>
+            <a href="{{ '/docs/firmware-analysis-notes' | relative_url }}">Analysis Notes</a>
+            <a href="{{ '/docs/firmware-ghidra-README' | relative_url }}">Ghidra Import Kit</a>
+            <a href="{{ '/docs/firmware-ghidra-quickstart' | relative_url }}">Ghidra Quickstart</a>
+            <a href="{{ '/docs/firmware-open-questions' | relative_url }}">Open Questions</a>
+          </div>
+        </div>
+        <a class="nav-link" href="{{ '/#scripts' | relative_url }}">Scripts</a>
+        <a class="nav-link" href="{{ '/#hardware' | relative_url }}">Hardware</a>
+        <a class="nav-link-ext" href="https://www.ailunce.com/Assets/file/AilunceHD2-Multi-language%20Manual-A0-Ailunce%20website.pdf" target="_blank">HD2 Manual</a>
+      </div>
+    </div>
+  </nav>
+  <main class="page-content">
+    <div class="wrapper">
+      {{ content }}
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="wrapper">
+      <p>Documentation for the Ailunce HD1/HD2 DMR radio &mdash; extracted from <a href="https://github.com/anomalyco/pylunce">pylunce</a></p>
+    </div>
+  </footer>
+</body>
+</html>

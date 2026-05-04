@@ -1,4 +1,8 @@
-# pylunce
+---
+title: HD2 Infodump
+---
+
+# HD2 Infodump
 
 Reverse-engineered tools and documentation for the **Ailunce HD1 / HD2 DMR radio**
 (firmware `HD-GPS-HD2PA-C7000-V2.1.3-GPS.bin`).
@@ -9,23 +13,35 @@ wrong frame semantics for large reads, no checksum formula). These tools
 reproduce the real protocol observed in USB pcaps, verified against a live
 radio.
 
-## Protocol & Format Reference
+## Codeplug Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Wire Protocol](docs/protocol.html) | Serial protocol: frames, checksums, read/write families, timing |
-| [Address Space](docs/address-space.html) | Region map, packed `.bin` ordering, dual-bitmap, kill state |
-| [Channel Format](docs/channels.html) | Channel slot bit-level layout, inline Rx List, VFOs |
-| [Records](docs/records.html) | Contacts, group aliases, zones, Radio IDs |
-| [Settings](docs/settings.html) | Radio-wide settings byte table |
-| [Menu Tree](docs/menu-tree.html) | Complete radio menu hierarchy with firmware cross-reference |
-| [CPS CSV Format](docs/cps-csv-format.html) | CPS channel import/export CSV column reference |
-| [Firmware Update](docs/fw_update.html) | Firmware update protocol, YMODEM transfer, HR_C7000 architecture |
-| [Diff Tests](docs/diff-tests.html) | Diff-driven reverse engineering test plan |
-| [HD2 Manual (PDF)](https://www.ailunce.com/Assets/file/AilunceHD2-Multi-language%20Manual-A0-Ailunce%20website.pdf) | Official Ailunce HD2 multi-language manual (external PDF) |
-| [NOTES](docs/NOTES.html) | Project notes and protocol/format index |
+| [Wire Protocol](docs/protocol) | Serial protocol: frames, checksums, read/write families, timing |
+| [Address Space](docs/address-space) | Region map, packed `.bin` ordering, dual-bitmap, kill state |
+| [Channel Format](docs/channels) | Channel slot bit-level layout, inline Rx List, VFOs |
+| [Records](docs/records) | Contacts, group aliases, zones, Radio IDs |
+| [Settings](docs/settings) | Radio-wide settings byte table |
+| [Menu Tree](docs/menu-tree) | Complete radio menu hierarchy with firmware cross-reference |
+| [CPS CSV Format](docs/cps-csv-format) | CPS channel import/export CSV column reference |
+| [Firmware Update](docs/fw_update) | Firmware update protocol, YMODEM transfer, HR_C7000 architecture |
+| [Diff Tests](docs/diff-tests) | Diff-driven reverse engineering test plan |
+| [NOTES](docs/NOTES) | Project notes and protocol/format index |
 
-## All Scripts
+## Firmware Reverse Engineering
+
+| Document | Description |
+|----------|-------------|
+| [Firmware Summary](docs/firmware-summary) | Full analysis: memory layout, subsystem inventory, tone tables, IARU presets, DMR layer, GPS, encryption, Ghidra results |
+| [HR_C7000 Reference Tables](docs/firmware-c7000-reference) | Memory map, PIC interrupts, baseband sub-interrupts, IO pin mux, boot flow |
+| [HR_C7000 BGA Pinmap](docs/firmware-c7000-pinmap) | Full pin map with JTAG, UART0, SPI, USB, power pins |
+| [Menu Dispatcher Architecture](docs/firmware-dispatcher-architecture) | How the menu pointer table dispatches to ROM-resident handlers |
+| [Firmware Analysis Notes](docs/firmware-analysis-notes) | Key-swap decryption bugs, function pointer tables, structural findings |
+| [Ghidra Import Kit](docs/firmware-ghidra-README) | Memory map, decryption reproducibility, coverage stats |
+| [Ghidra Quickstart](docs/firmware-ghidra-quickstart) | Step-by-step Ghidra import, metadata scripts, navigation tips |
+| [Open Questions](docs/firmware-open-questions) | Unresolved codeplug questions vs. firmware analysis status |
+
+## Scripts {#scripts}
 
 | Script | Description |
 |--------|-------------|
@@ -53,19 +69,7 @@ radio.
 | [`fw_analyze.py`](scripts/fw_analyze.py) | Firmware analysis (PyGhidra) |
 | [`fw_analyze_mcore.py`](scripts/fw_analyze_mcore.py) | Firmware analysis (multi-core variant) |
 
-## Firmware Reverse Engineering
-
-| Document | Description |
-|----------|-------------|
-| [Firmware Summary](docs/firmware-summary.html) | Full analysis: memory layout, subsystem inventory, tone tables, IARU presets, DMR layer, GPS, encryption, Ghidra results, coverage assessment |
-| [HR_C7000 Reference Tables](docs/firmware-c7000-reference.html) | Memory map, PIC interrupts, baseband sub-interrupts, IO pin mux, boot flow |
-| [HR_C7000 BGA Pinmap](docs/firmware-c7000-pinmap.html) | Full pin map with JTAG, UART0, SPI, USB, power pins identified |
-| [Menu Dispatcher Architecture](docs/firmware-dispatcher-architecture.html) | How the menu pointer table dispatches to ROM-resident handlers |
-| [Firmware Analysis Notes](docs/firmware-analysis-notes.html) | Key-swap decryption bugs, function pointer tables, structural findings |
-| [Ghidra Import Kit](docs/firmware-ghidra-README.html) | Memory map, decryption reproducibility, coverage stats |
-| [Ghidra Quickstart](docs/firmware-ghidra-quickstart.html) | Step-by-step Ghidra import, metadata scripts, navigation tips |
-
-## Hardware
+## Hardware {#hardware}
 
 - USB-serial chip: **CH340** (VID `0x1A86`, PID `0x7523`)
 - Baud rate: **119200** 8N1 (non-standard)
@@ -73,7 +77,3 @@ radio.
 - Flash: Winbond W25Q512 (64 MB SPI NOR)
 - Reference hardware: [DR5800 Service Manual (PDF)](https://www.connectsystems.com/products/top/radios/CS120D/DR5800-2%20ServiceManua01.pdf) (same C7000 platform)
 - HR_C7000 datasheet: [HR_C7000 Document 2 (PDF)](https://www.connectsystems.com/products/top/radios/CS120D/HR_C7000%20Document%202.pdf)
-
-## Source
-
-Documentation extracted from the [pylunce](https://github.com/anomalyco/pylunce) project.

@@ -1,6 +1,13 @@
-title: pylunce
-description: Reverse-engineered Ailunce HD1/HD2 DMR codeplug format documentation
-theme: jekyll-theme-slate
+---
+theme: null
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
 markdown: kramdown
 kramdown:
   input: GFM
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
