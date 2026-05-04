@@ -57,7 +57,7 @@ radio.
 
 - USB-serial chip: **CH340** (VID `0x1A86`, PID `0x7523`)
 - Baud rate: **119200** 8N1 (non-standard)
-- SoC: HR_C7000 (C-SKY CK803S core, 192 MHz)
+- SoC: HR_C7000 (C-SKY CK803S core, 192 MHz) — [User Manual (Scribd)](https://www.scribd.com/document/577386066/HR-C7000-User-Manual)
 - Flash: Winbond W25Q512 (64 MB SPI NOR)
 
 ## Source
