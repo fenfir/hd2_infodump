@@ -60,6 +60,7 @@ radio.
 - SoC: HR_C7000 (C-SKY CK803S core, 192 MHz) — [User Manual (Scribd)](https://www.scribd.com/document/577386066/HR-C7000-User-Manual)
 - Flash: Winbond W25Q512 (64 MB SPI NOR)
 - Reference hardware: [DR5800 Service Manual (PDF)](https://www.connectsystems.com/products/top/radios/CS120D/DR5800-2%20ServiceManua01.pdf) (same C7000 platform)
+- HR_C7000 datasheet: [HR_C7000 Document 2 (PDF)](https://www.connectsystems.com/products/top/radios/CS120D/HR_C7000%20Document%202.pdf)
 
 ## Source
 
