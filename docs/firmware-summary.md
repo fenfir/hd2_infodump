@@ -30,7 +30,7 @@ unused 4-byte slots throughout.
 
 The firmware uses a per-word XOR encryption: clean 4-byte word `W` becomes
 ciphertext `W ⊕ K`, where `K ∈ {KEY_N=0x07777777, KEY_S=0x01111111}` is
-chosen by a bitmap. **DIFF** = `KEY_N ⊕ KEY_S = 0x06666606` is the flip
+chosen by a bitmap. **DIFF** = `KEY_N ⊕ KEY_S = 0x06666666` is the flip
 mask used to correct words assigned the wrong key.
 
 Recovery progressed v3 → v17 → v22 → v25 → v27 → v31 → **v32** through
@@ -76,29 +76,11 @@ the codeplug's two contact tables.
 
 ### 3.2 Tone tables (radio's full supported tone set)
 
-**CTCSS** at `0x06da3c..0x06daa8` — 31 frequencies, 4-byte stride
-(2 BCD-LE × 0.1 Hz tones per word):
-
-```
-62.5 67.0 69.3 71.9 74.4 77.0 79.7 82.5 85.4 88.5 91.5 94.8
-103.3 117.5 127.5 137.2 145.6 152.2 161.4 166.6 173.8 177.3
-199.5 203.5 206.5 210.7 218.1 225.7 229.1 233.6 236.5
-```
-
-**DCS** at `0x06daa8..0x06db78` — 103 octal codes, 2-byte BCD-LE:
-
-```
-023 025 026 031 032 036 043 047 051 053 054 065 071 072 073 074
-114 115 116 122 125 131 132 134 152 155 156 162 165 172 174
-205 212 223 225 226 243 244 245 246 251 252 255 261 263 265 266 271 274
-306 311 315 325 331 332 343 346 351 356 364 365 371
-411 412 413 423 431 432 445 446 452 454 455 462 464 465 466
-503 506 516 523 526 532 546 565
-606 612 624 627 631 632 645 654 662 664
-703 712 723 731 732 734 743
-```
-
+**CTCSS** at `0x06da3c..0x06daa8` — 31 frequencies (v208 rodata).
+**DCS** at `0x06daa8..0x06db78` — 103 octal codes (v208 rodata).
 Cross-firmware: v207 has CTCSS at `0x06bf2c`, v213 at `0x06dadc`.
+
+Full frequency/code lists and channel-byte encoding: see [channels](channels) "Tone field encoding" and "Firmware tone tables".
 
 ### 3.3 IARU region presets
 
@@ -219,23 +201,8 @@ from newlib defaults.
 
 ### 3.11 Encryption
 
-5 cipher types, menu segment 0 at `0x06df4c`:
-
-```
-Off  Normal  Enhanced  ARC4  AES128  AES256
-```
-
-Storage:
-- `Normal` keys: `0x3D00` (2 B BCD × 16 slots)
-- `Enhanced` keys: `0x3E00` (16 B × 16 slots)
-- `ARC4`: `0x5018+` slots 32–47 (49 B × 16)
-- `AES128`: `0x5018+` slots 16–31
-- `AES256`: `0x5018+` slots 0–15
-
-Channel byte encoding: `+0x28` bits 6:5 = family (Off/Normal/Enhanced/AES);
-when family = AES, `+0x11` bits 4:3 select variant (ARC4/AES128/AES256).
-Key index in `+0x28` low nibble (radio menu label `Encrypt NO` /
-加密组别). Confirmed via debug printf `加密组别 NN: 算法：%x`.
+5 cipher types, menu segment 0 at `0x06df4c`: `Off Normal Enhanced ARC4 AES128 AES256`.
+Channel byte encoding and key storage regions: see [channels](channels) and [settings](settings) encryption sections.
 
 ### 3.12 Boot / programmer protocol
 
@@ -291,33 +258,9 @@ Output files:
 
 ## 5. Menu dispatcher architecture (final)
 
-**The menu dispatcher does NOT live in this firmware.**
-
-The 10 menu pointer-table handlers (`0x0561daee`, `0x0561da2a`,
-`0x0561df7e`, `0x0561df46`, `0x0561df76`, `0x0561dfc2`, `0x0561d3a2`,
-`0x0561d33e`, `0x05670c82`) are referenced **only from the menu
-pointer table itself**. Verified by:
-
-1. Each handler appears exactly once in firmware (or twice for
-   `0x05670c82`), all at offsets `0x06df00..0x06efe0`.
-2. No memcpy-style `(SRAM_dst, flash_src, plausible_len)` triplet in
-   any code region copies these addresses.
-3. The 9 code-region literals to nearby `0x0561d...` addresses land in
-   tiny (4–10 byte) "function" stubs that Ghidra cannot disassemble —
-   they are vtable-like data, not actual code.
-
-**Conclusion:** the C7000 SoC has menu/UI framework code in chip ROM
-(or another non-flash memory) at the `0x055xxxxx..0x0567xxxxx` range.
-The application firmware (this file) wires labels to that ROM
-framework via the menu pointer table, but the framework code itself is
-not in the firmware image.
-
-To get dispatcher logic, would need:
-1. JTAG/SWD dump of C7000 internal ROM
-2. Vendor BSP/SDK from chip maker (Anhui Sunplus or similar)
-3. Behavioral reverse-engineering (toggle items, observe response)
-
-See `v32_dispatcher_architecture.md` for full reasoning.
+**The menu dispatcher does NOT live in this firmware.** The handler
+addresses (`0x0561d...` range) are ROM-resident C7000 chip services.
+Full reasoning: see [Dispatcher Architecture](firmware-dispatcher-architecture).
 
 ---
 

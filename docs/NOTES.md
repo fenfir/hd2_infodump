@@ -26,5 +26,5 @@ Detailed reference docs:
 - Many settings bytes unmapped — see "Still unmapped" table in `docs/settings.md`.
 - DTMF digit-sequence tables (per-channel index is mapped; actual digit
   sequences are not). 2-tone / 5-tone tables also unmapped.
-- Emergency Alarm encoding at `0x29AC` — address confirmed, encoding
-  unknown (local/remote enum values not verified by diff).
+- Emergency Alarm type at `0x299D` bit 1 (clear=Remote, set=Local ✓);
+  Emergency key functions at `0x29AE`/`0x29AF` (same enum as Key Define).

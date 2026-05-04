@@ -168,7 +168,7 @@ reproducing / extending the decryption work from scratch.
 | Disassembled | 494 KB (81%) |
 | In recognized function bodies | 85 KB (14%) |
 | In meaningful functions (≥32B) | 41 KB (7%) |
-| Total functions | 4,936 |
+| Total functions | 4,936 (headless PyGhidra: 4,333 — GUI analysis finds more small auto-detected functions) |
 | Meaningful functions (≥32B) | 730 |
 | Seg A functions | 4,159 |
 | Seg B functions | 588 |

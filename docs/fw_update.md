@@ -215,14 +215,14 @@ Decrypted files in `analysis/` directory:
 - `HD-GPS-HD2PA-C7000-V2.1.3-GPS.dec.bin`
 - `HD2-FW-V2.0.9-GPS.dec.bin`              (phase 0, untested)
 
-**Load base**: `0x03000000` (flash XIP start). Confirmed by self-referential pointer
-scan: 3711 LE 32-bit values in the decrypted V2.0.7 firmware fall within
-`[0x03000000, 0x03000000 + filesize)`, far exceeding any other candidate base.
-This matches the hardware memory map (LCSFC XIP at `0x03000000`).
+**Load base**: `0x03000000` (flash XIP start; the LCSFC hardware maps external
+flash starting at this address). The firmware image itself starts at offset
+`0xd000` within the LCSFC window (VA `0x0300d000`), but Ghidra imports use
+file offset `0x00000000` as the import base — see [Ghidra Import Kit](firmware-ghidra-README).
 
-Ghidra analysis: `CSKY_V2:LE:32:default`, base `0x03000000`, using pre-decrypted
-files from `analysis/`. Prior Ghidra analysis was on encrypted data — all prior
-results are invalid.
+**Note:** the Ghidra analysis section previously in this document analyzed
+still-encrypted V2.1.3 firmware and is obsolete. See the [Firmware Reverse
+Engineering](firmware-summary) docs for current analysis.
 
 ## HR_C7000 Architecture
 
@@ -236,70 +236,18 @@ Confirmed from HR_C7000 user manual (Dahua, 2017) and DR5800 service manual:
 - **Flash**: External SPI NOR via LCSFC, XIP at `0x03000000` (up to 16 MB address space)
 - **Boot ROM**: 2 KB at `0x00000000`
 
-### Memory map
+Full memory map, PIC interrupt table, IO pin mux, and boot flow: see [HR_C7000 Reference Tables](firmware-c7000-reference).
 
-From HR_C7000 User Manual (Dahua, 2017), table 1 地址映射关系:
+### Boot process / JTAG / Flash chips
 
-| Start        | End          | Function          | Size   | Notes                  |
-|--------------|--------------|-------------------|--------|------------------------|
-| `0x00000000` | `0x0000FFFF` | Boot ROM          | 2 KB   |                        |
-| `0x00010000` | `0x00057FFF` | IRAM (SRAM)       | 288 KB |                        |
-| `0x03000000` | `0x03FFFFFF` | Flash XIP (LCSFC) | 16 MB  | Firmware load base     |
-| `0x11000000` | `0x1100FFFF` | Modem             | 64 KB  |                        |
-| `0x12000000` | `0x1200FFFF` | i8080             | 64 KB  |                        |
-| `0x13000000` | `0x1303FFFF` | USB               | 256 KB |                        |
-| `0x14000000` | `0x1400FFFF` | TIMER             | 64 KB  |                        |
-| `0x14010000` | `0x1401FFFF` | WDG (watchdog)    | 64 KB  |                        |
-| `0x14020000` | `0x1402FFFF` | GPIOA             | 64 KB  |                        |
-| `0x14030000` | `0x1403FFFF` | UART0             | 64 KB  | Debug/boot UART        |
-| `0x14040000` | `0x1404FFFF` | UART1             | 64 KB  |                        |
-| `0x14050000` | `0x1405FFFF` | UART2             | 64 KB  |                        |
-| `0x14060000` | `0x1406FFFF` | I2C0              | 64 KB  |                        |
-| `0x14070000` | `0x1407FFFF` | I2C1              | 64 KB  |                        |
-| `0x14080000` | `0x1408FFFF` | I2C2              | 64 KB  | Internal RTC dedicated |
-| `0x14090000` | `0x1409FFFF` | UART3             | 64 KB  |                        |
-| `0x140A0000` | `0x140AFFFF` | SPI Master 0      | 64 KB  |                        |
-| `0x140B0000` | `0x140BFFFF` | SPI Master 1      | 64 KB  |                        |
-| `0x140C0000` | `0x140CFFFF` | PWM               | 64 KB  |                        |
-| `0x140D0000` | `0x140DFFFF` | ADC               | 64 KB  |                        |
-| `0x140E0000` | `0x140EFFFF` | SPI2              | 64 KB  |                        |
-| `0x140F0000` | `0x140FFFFF` | DAC               | 64 KB  |                        |
-| `0x14100000` | `0x1410FFFF` | GPIOB             | 64 KB  |                        |
-| `0x14110000` | `0x1411FFFF` | GPIOC             | 64 KB  |                        |
-| `0x14120000` | `0x1412FFFF` | SPI Slave 0       | 64 KB  |                        |
-| `0x14130000` | `0x1413FFFF` | SPI Slave 1       | 64 KB  |                        |
-| `0x14140000` | `0x1414FFFF` | SPI Slave 2       | 64 KB  |                        |
-| `0x14150000` | `0x1415FFFF` | SPI Master 3      | 64 KB  | EFUSE dedicated        |
-| `0x15000000` | `0x1500FFFF` | SDIO              | 64 KB  |                        |
-| `0x16000000` | `0x1600FFFF` | Modem Buffer      | 64 KB  |                        |
-| `0x17000000` | `0x1700FFFF` | PIC (interrupts)  | 64 KB  |                        |
-| `0x18000000` | `0x18007FFF` | SRAM (SAHB)       | 32 KB  |                        |
-
-### Boot process
-
-1. CPU starts from Boot ROM at `0x00000000` at 24 MHz
-2. Boot ROM sends data on UART0 (115200 baud), waits for host response
-3. If host responds: enters debug mode (read/write/download/jump/exit commands)
-4. If no response: checks flash offset 0x00 for `DH_FLAG` magic
-5. If found: reads jump address from offset 0x04, jumps to firmware
-6. UART0 (boot ROM) is **not accessible** on the programming cable
-
-### JTAG
-
-5-wire CK803S JTAG (TCK, TMS, TDI, TDO, RST_N), enabled by default.
-Requires a CK-Link debugger (not ARM J-Link). Pins on C7000 BGA:
-C5 (TMS), B5 (TCK), A6 (TDI), B6 (TDO), C6 (RST_N).
-
-### Flash chips (from DR5800 service manual, HD2 may differ)
-
-- **W25Q64** (8 MB) on SPI0 — codeplug, calibration, channel data
-- **W25Q128** (16 MB) on NFC_SPI — firmware and voice prompts
-- HD2 confirmed: **W25Q512** (64 MB) via JEDEC ID in boot dump
+See [HR_C7000 Reference Tables](firmware-c7000-reference) and [HR_C7000 Pinmap](firmware-c7000-pinmap).
 
 ## Debug UART (120000 baud)
 
-The programming cable exposes the application firmware's debug UART at
-**120000 baud** 8N1 (not UART0; likely UART1 or UART3).
+This is a **separate interface** from the CPS codeplug protocol at 119200 baud
+(documented in [protocol](protocol)). The programming cable exposes the
+application firmware's debug UART at **120000 baud** 8N1 (not UART0; likely
+UART1 or UART3).
 
 ### Boot diagnostic dump
 
@@ -375,46 +323,6 @@ them before writing to flash. To obtain the decrypted firmware for reverse engin
 3. **Boot ROM UART0** — if UART0 test pads can be found on the PCB (pins T9/P10 on BGA),
    the 2 KB boot ROM at 115200 baud has read/write/download/jump commands.
    Not accessible via the programming cable.
-
-## Firmware Reverse Engineering (Ghidra)
-
-### Layout
-
-- **File**: `firmware/HD-GPS-HD2PA-C7000-V2.1.3-GPS.raw.bin` (YMODEM framing stripped)
-- **Size**: 606,600 bytes (0x94188)
-- **Logical base**: `0x03700000` (confirmed from vector table pointer values)
-- **No encryption, no compression** — entropy 7.0-7.5 bits throughout; consistent with
-  compiled CK803S code. No null-terminated ASCII strings found (strings likely stored
-  as encoded Chinese text or via indices into a string table).
-
-### Memory map
-
-| Offset | Logical addr | Description |
-|--------|-------------|-------------|
-| `+0x0000` | `0x03700000` | Startup/init code (0x78 bytes) |
-| `+0x0078` | `0x03700078` | `0xFFFFFFFF` sentinel |
-| `+0x007c` | `0x0370007c` | Vector table (32-bit pointers, little-endian) |
-| `+0x0180` | `0x03700180` | Main code begins |
-| `+0x066000` | `0x03766000` | Low-entropy data region (0x18000 bytes) — lookup tables (RGB palette, signal tables, etc.) |
-| `+0x07e000` | `0x0377e000` | Code resumes |
-| `+0x094188` | — | End of file |
-
-### Vector table (`+0x007c`)
-
-- **Only one unique ISR**: `vec[0]` → `0x03770f4b` (file `+0x70f4b`)
-- All other vectors → `0x03777377` (file `+0x77377`, default handler)
-- 45 infinite loops (`br . = 0xFE07`) scattered throughout — default ISR stubs
-- 262 function prologues (`push r15 / push r4-r15` patterns) identified
-
-### Ghidra setup
-
-- Language: `CSKY_V2:LE:32:default`
-- Extension: `~/.config/ghidra/ghidra_12.0.4_NIX/Extensions/CSKY/`
-- **Extension bug fixed**: `mvcv` in `16b_data.sinc` had overly strict `i16_r4_rx_n = 0b0000`
-  constraint that prevented decoding the first startup instruction (`0x665b` = `mvcv r9`).
-  Removed that constraint — extension now decodes the startup code.
-- 4 remaining unknown 32-bit opcodes (sop values not in extension): minor gaps.
-- Scripts: `pylunce/fw_scan.py` (pure Python, no Ghidra) and `pylunce/fw_analyze.py` (PyGhidra).
 
 ## Source
 
