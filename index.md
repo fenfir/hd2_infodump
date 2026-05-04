@@ -53,6 +53,17 @@ radio.
 | [`fw_analyze.py`](scripts/fw_analyze.py) | Firmware analysis (PyGhidra) |
 | [`fw_analyze_mcore.py`](scripts/fw_analyze_mcore.py) | Firmware analysis (multi-core variant) |
 
+## Firmware Reverse Engineering
+
+| Document | Description |
+|----------|-------------|
+| [HR_C7000 Reference Tables](docs/firmware-c7000-reference.html) | Memory map, PIC interrupts, baseband sub-interrupts, IO pin mux, boot flow |
+| [HR_C7000 BGA Pinmap](docs/firmware-c7000-pinmap.html) | Full pin map with JTAG, UART0, SPI, USB, power pins identified |
+| [Menu Dispatcher Architecture](docs/firmware-dispatcher-architecture.html) | How the menu pointer table dispatches to ROM-resident handlers |
+| [Firmware Analysis Notes](docs/firmware-analysis-notes.html) | Key-swap decryption bugs, function pointer tables, structural findings |
+| [Ghidra Import Kit](docs/firmware-ghidra-README.html) | Memory map, decryption reproducibility, coverage stats |
+| [Ghidra Quickstart](docs/firmware-ghidra-quickstart.html) | Step-by-step Ghidra import, metadata scripts, navigation tips |
+
 ## Hardware
 
 - USB-serial chip: **CH340** (VID `0x1A86`, PID `0x7523`)
