@@ -22,7 +22,7 @@ radio.
 | [CPS CSV Format](docs/cps-csv-format.html) | CPS channel import/export CSV column reference |
 | [Firmware Update](docs/fw_update.html) | Firmware update protocol, YMODEM transfer, HR_C7000 architecture |
 | [Diff Tests](docs/diff-tests.html) | Diff-driven reverse engineering test plan |
-| [HD2 Manual](docs/Ailuncehd2_manual.html) | Official HD2 user's manual (extracted text) |
+| [HD2 Manual (PDF)](https://www.ailunce.com/Assets/file/AilunceHD2-Multi-language%20Manual-A0-Ailunce%20website.pdf) | Official Ailunce HD2 multi-language manual (external PDF) |
 | [NOTES](docs/NOTES.html) | Project notes and protocol/format index |
 
 ## All Scripts
