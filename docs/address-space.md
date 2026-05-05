@@ -66,6 +66,21 @@ Layout:
 triggers self-destruct (see "Kill state" below). Within a byte, bit 0 =
 lowest-numbered channel of that group of 8.
 
+### vfo_config layout
+
+The `vfo_config` region is 896 bytes (file `0x0200..0x057F`). Only the
+first 750 bytes are decoded:
+
+| File offset | Size | Purpose |
+|-------------|------|---------|
+| `0x0200..0x0376` | 375 B | bm1 — primary channel-presence bitmap |
+| `0x0377..0x04ED` | 375 B | bm2 — duplicate (parity copy) |
+| `0x04EF..0x057F` | 145 B | **Unknown** — possibly channel metadata or unused |
+
+The 145 trailing bytes (`0x04EF..0x057F`) have not been decoded. They do
+not appear to contain VFO-A/B records (those live in the `header` region
+at file `0x0090` and `0x0140`).
+
 Confirmed across all dumps:
 
 | State                 | bm1[4] / bm2[4] | Populated chans | Notes |

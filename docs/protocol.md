@@ -8,7 +8,9 @@ All reverse-engineered from USB pcaps of the official Windows CPS
 
 - Chip: CH340 (VID `0x1A86`, PID `0x7523`).
 - Baud: **119200** 8N1 (non-standard — pyserial on macOS applies via
-  `IOSSIOSPEED`; `termios` alone returns EINVAL).
+  `IOSSIOSPEED`; `termios` alone returns EINVAL). Note: the CPS configuration
+  string is `"115200,N,8,1"`, but the CH340 likely maps this to the actual
+  119200 rate internally.
 - No flow control; RTS and DTR driven high locally after open.
 - `/dev/cu.usbserial-*` on macOS; `/dev/tty.usbserial-*` blocks on DCD.
 - **Power cable noise**: plugging in the radio's charging/power cable while
@@ -264,3 +266,53 @@ relative to the loaded baseline; `hd1_codeplug_write.py` does the same
 
 Host sends ASCII `END` (`45 4e 44`). This **reboots the radio** — it is
 not a graceful close; if you want to issue more commands, don't send it.
+
+## WriteCommit (`b1=0x0E`) — IARU band limits
+
+A separate write variant used by the CPS to push IARU region band limits.
+These bypass the normal `b1=0x0F`/`b1=0x31` codeplug address space —
+switching regions produces zero EEPROM diffs across all 8 mapped regions.
+
+### Frame (host → radio, 27 bytes)
+
+```
+[0]      0x68
+[1]      0x0E
+[2]      0x01           direction: 1 = write request
+[3]      0x01
+[4]      pct            cosmetic
+[5]      csum           checksum (formula unknown; captured value works)
+[6..7]   0x10, 0x00     size = 16 (LE uint16)
+[8..9]   addr_lo, addr_hi  (captured: 0x00, 0x00)
+[10..25] 16 bytes       band limit payload (8 × 2-byte BCD LE × 100 kHz)
+[26]     0x10           terminator
+```
+
+### Band limit payload (16 bytes)
+
+```
+offset  bytes  meaning
+  0..1   2 B    RX A lo   (BCD LE × 100 kHz)
+  2..3   2 B    RX A hi   (BCD LE × 100 kHz)
+  4..5   2 B    TX A lo   (BCD LE × 100 kHz)
+  6..7   2 B    TX A hi   (BCD LE × 100 kHz)
+  8..9   2 B    RX B lo   (BCD LE × 100 kHz)
+ 10..11  2 B    RX B hi   (BCD LE × 100 kHz)
+ 12..13  2 B    TX B lo   (BCD LE × 100 kHz)
+ 14..15  2 B    TX B hi   (BCD LE × 100 kHz)
+```
+
+### Observed region values
+
+| Field | Region 1 | Region 2 | Region 3 |
+|-------|----------|----------|----------|
+| RX A | 136–174 | 136–225 | 136–174 |
+| TX A | 144–146 | 144–148 | 144–148 |
+| RX B | 400–480 | 400–480 | 400–480 |
+| TX B | 430–440 | 420–450 | 430–440 |
+
+### Ack (radio → host, 11 bytes)
+
+```
+68 0e 02 01 [pct] [csum] 10 00 [addr_lo] [addr_hi] 10
+```

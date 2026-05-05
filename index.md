@@ -20,7 +20,7 @@ radio.
 | [Wire Protocol](docs/protocol) | Serial protocol: frames, checksums, read/write families, timing |
 | [Address Space](docs/address-space) | Region map, packed `.bin` ordering, dual-bitmap, kill state |
 | [Channel Format](docs/channels) | Channel slot bit-level layout, inline Rx List, VFOs |
-| [Records](docs/records) | Contacts, group aliases, zones, Radio IDs |
+| [Records](docs/records) | All record types: contacts, zones, Radio IDs, encryption keys, key calls, SMS, FM presets, DTMF |
 | [Settings](docs/settings) | Radio-wide settings byte table |
 | [Menu Tree](docs/menu-tree) | Complete radio menu hierarchy with firmware cross-reference |
 | [CPS CSV Format](docs/cps-csv-format) | CPS channel import/export CSV column reference |

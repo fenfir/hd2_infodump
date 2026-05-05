@@ -141,7 +141,9 @@ named byte.
 | Field                | Mask / position                     | Notes |
 |----------------------|-------------------------------------|-------|
 | **Kill Code**        | `+0x2C` (1 byte)                    | 1-based priority contact index. `0x00` = Always/None (default). E.g. `0x02` = priority contact CALL2. |
+| `+0x2D`             | 1 byte                              | Unknown / padding. |
 | **WakeUp Code**      | `+0x2E` (1 byte)                    | 1-based priority contact index. `0x00` = None (default). E.g. `0x02` = priority contact CALL2. |
+| `+0x2F`             | 1 byte                              | Unknown / padding. |
 
 ### Inline Rx List (`+0x30..+0xAF`)
 

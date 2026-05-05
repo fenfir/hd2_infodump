@@ -412,8 +412,7 @@ For example, `00 00 00 01` = 100.0 MHz (BCD `00000001` → 10,000,000 × 10 Hz �
 
 VHF and UHF frequency scan start/stop bounds as configured in CPS.
 All bytes are `0xFF` when the scan range has not been set in CPS (radio
-uses its full band limits). **Address and encoding need a diff session to
-verify** — all current sample bins have this region unset.
+uses its full band limits).
 
 ### Encoding (confirmed by diff)
 
@@ -447,7 +446,8 @@ nibble). See [`channels.md`](channels.md).
 - **Serial number** at radio `0xE000` (b1=0x0F): ASCII null-padded,
   e.g. `HD211101108`. Manufacture date at `0xE02C`: `2024/4/15`.
 - **Radio ID string** at `0xE800`: `IHD8580` (7 bytes, read by CPS
-  during setup probe).
+  during setup probe; confirmed by both firmware analysis and CPS source
+  decompilation).
 - **Boot-ROM image filename** at firmware rodata `0x06de60` (v208):
   `HD-GPS-HD2PA-C7000-V2.0.7-GPS.bin` — note the version says
   **V2.0.7** even in the v2.0.8 firmware, so this string is a
@@ -641,11 +641,6 @@ space entirely. They do not appear at any `b1=0x0F` or `b1=0x31` address.
 | **Tx Channel** | Main #12 | Unclear what this setting controls. |
 | **Bluetooth** | Main #5 | `0x2978` bit 3 was ruled out; bit 2 = Night Mode. Address still unknown. |
 | **Channel Dis B / VFO-B CH-Mode** | CPS | Band A is `0x2978` bits 5,0. Band B not in any of the 8 mapped EEPROM regions — confirmed by full-dump diff (zero changes). Likely firmware-internal or in an unmapped address range. |
-| **Power On Password enable** | CPS | **Resolved.** `0x2977` bit 3 (`0x08`), set=enabled, clear=disabled. Previously thought to be `0x299F` bit 4 — incorrect (that's VFO Lock). |
-| **IARU Region** | CPS | **Resolved.** Band limits are written via the `b1=0x0E` WriteCommit payload (16 bytes, 8 × BCD LE values). See "IARU Region / Band limits" section above. |
-| **Frequency Scan start/end** | Detailed ops p.8 | Addresses mapped at `0x29C0..0x29C3` (VHF) and `0x29C8..0x29CB` (UHF), encoding confirmed as BCD LE × 100 kHz. |
-| **Priority Scan CH** | Detailed ops p.8 | `0x29AC` confirmed (0-based index). |
-| **DTMF code table** | Ch #11 | **Resolved.** 128 slots at `0x4471` (16 B stride). Per-channel index at `+0x10` low 7 bits (0-based, 0..127). See "DTMF Encode Table" section above. |
 | **2-tone / 5-tone tables** | — | Referenced in CPS but never located. |
 | **NOAA config** | Detailed ops p.11 | 11 preset frequencies (162.400–162.550 + 161.650/750/775, 162.000 MHz). Exhaustive BCD search of full EEPROM dump and all unmapped address ranges (`0x0F` scan `0x0000..0xFFFF`) found zero hits. Frequencies are **firmware-hardcoded** in ROM, not stored in codeplug. |
 | **table_1dfx** residual | — | Quick Messages use ~3.2 KB; rest of 12 KB is unknown. |
