@@ -128,7 +128,7 @@ named byte.
 |----------------------|-------------------------------------|-------|
 | **2nd Tx Authority** | `+0x28` bit 7 (`0x80`)              | CSV col 25, NOT Promiscuous. |
 | **Encrypt family**   | `+0x28` bits 6:5                    | 00=Off, 01=Normal, 10=Enhanced, 11=AES. When family=AES, `+0x11` bits 4:3 select variant: `00`=ARC4, `01`=AES128, `10`=AES256. The firmware **menu** (rodata segment 0 at `0x06df4c..0x06df60` in v208) lists the 6 resulting types as `Off / Normal / Enhanced / ARC4 / AES128 / AES256` (menu indices 0..5). |
-| **Encrypt key index**| `+0x28` low nibble (`0x0F`)         | 4-bit index 0..15 (UI shows 1..16, off-by-one). Radio menu label is `Encrypt NO` / 加密组别 (lit. "encryption group"). Key tables: Normal at `0x3D00`, Enhanced at `0x3E00`, AES/ARC4 at `0x5018` — see `settings.md`. Firmware confirms via debug printf `加密组别 NN: 算法：%x`. |
+| **Encrypt key index**| `+0x28` low nibble (`0x0F`)         | 4-bit index 0..15 (UI shows 1..16, off-by-one). Radio menu label is `Encrypt NO` / 加密组别 (lit. "encryption group"). Key tables: Normal at `0x3D00`, Enhanced at `0x3E00`, AES/ARC4 at `0x5018` — see `settings.md`. |
 | **Promiscuous / RxAll CC** | `+0x29` bit 0 (`0x01`)        | CPS labels this "Promiscuous" in CSV (col 24) and "RxAll CC" in the channel UI — same bit, same feature. Set = receive all calls regardless of color code. |
 | **TX Authority (analog)** | `+0x29` bits 5:4 (`0x30`)       | 2-bit field: `00`=Allow TX, `01`=Channel Free, `11`=Prohibit TX. |
 | **Bandwidth**        | `+0x29` bit 6 (`0x40`)              | Set = wide, cleared = narrow. Firmware menu surfaces this as the `W/N` setting with two values `Narrow` / `Wide` (rodata `0x06fdb8`). |

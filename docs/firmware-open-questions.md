@@ -5,9 +5,16 @@ the v32 firmware string + Ghidra analysis can tell us.
 
 ## Summary
 
-Of 9 open questions, the firmware analysis directly resolves **0**,
-partially informs **2**, and leaves **7** still requiring either
-behavioral diff sessions or interactive Ghidra exploration.
+Of 9 open codeplug-format questions, the firmware analysis directly
+resolves **0**, partially informs **2**, and leaves **7** still
+requiring either behavioral diff sessions or interactive Ghidra
+exploration.
+
+The **activation / integrity-check** questions (`Activa` behaviour,
+the 7 boot-time encryption-group constants g1/g3/g11/g12/g21/g22/g50,
+the integrity-check patch) are fully resolved as of **2026-05-12**.
+See [§ Activation / integrity-check questions — RESOLVED](#activation--integrity-check-questions--resolved)
+at the bottom of this document.
 
 The fundamental limit: the radio reads codeplug data through a
 serial-protocol layer that abstracts addresses behind block-read
@@ -210,7 +217,8 @@ These are doc-improvements that DID flow from firmware analysis:
 - **Step Forbid option**: confirmed `Forbid` is a valid enum value.
 - **Slot 1 / Slot 2 spelling**: firmware uses spaces, CSV uses none.
 - **`Encrypt NO` Chinese label = `加密组别`**: 4-bit key index meaning
-  confirmed by debug printf `加密组别 NN: 算法：%x`.
+  (the boot-log printf with the same Chinese phrase is unrelated — it
+  belongs to the boot-time integrity check, not the channel field).
 
 All of these are now in `pylunce/docs/` (and ready to sync to
 `pylunce2/`).
@@ -231,3 +239,116 @@ The 4,333-function disassembled project at
 
 This is the next-level workflow that would resolve many of the
 unmapped-bytes questions without needing diff sessions for each.
+
+---
+
+## Activation / integrity-check questions — RESOLVED
+
+These were tracked outside the original 9-question list (mainly in
+`AGENTS.md` notes and ad-hoc session logs). Resolved **2026-05-12**
+against a live HD2 with chip UID `0.0.1d.5e`. Authoritative sources
+in the repo: `scripts/patch_crypto_check.py`,
+`activa_tests/test_38_uid_buf_g22.py`, `activa_tests/lib_radio.py`,
+`assets/crypto_init_decomp.c`, and boot logs in `tmp/v208_postflash_boot.log`.
+
+### A. "How does the integrity check (FUN_0304d564) work, and can it
+be patched without trashing the stack?"
+
+**RESOLVED.** The function runs 7 sequential checks; each non-final
+check that fails prints `加密组别 NN: 算法：%x,读取：%x` and then
+either inlines a function epilogue or branches to the shared epilogue
+at `0x0304d57a`, which pops the frame and returns early. The
+previous `PATCHED.*.bin` approach NOP'd post-printf returns and
+corrupted the stack.
+
+The working patch (`scripts/patch_crypto_check.py`) overwrites only
+the **first 2 bytes of each non-final failure site** with a CSKY V2
+16-bit `br` (encoding `0x0400 | ((disp/2) & 0x3FF)`) into the entry
+of the next check. Six 2-byte writes; site 7 is unchanged so the
+natural end-of-function epilogue runs exactly once. After this
+patch, all 7 `加密组别` debug lines print every boot. Flashed to
+hardware and verified.
+
+### B. "Are there really only 5 encryption groups (g1, g3, g11, g12,
+g21)?"
+
+**RESOLVED — no, there are 7.** The five known format-string
+offsets are `0x71044 (g1) / 0x71064 (g3) / 0x71084 (g11) /
+0x710a4 (g12) / 0x710c4 (g21)`. Two more live further on in the
+debug-printf rodata: **g22** and **g50**.
+
+- **g22** is the only check that's not a flat constant compare. It
+  reads 8 bytes from `0x7ae04c` (in the activation NVRAM block) and
+  compares each byte against a per-byte transform of the 8-byte
+  chip-UID buffer at `0x48350`. Formula (disassembly at
+  `0x0304d7c4..0x0304d824`, both `puVar2` and `DAT_0304d87c`
+  resolve to `0x00048350`):
+  ```
+  resp[0] = buf[5] + 0x12      resp[1] = buf[6] + 0x23
+  resp[2] = buf[0] + 0x3f      resp[3] = buf[2] - 0x2c
+  resp[4] = buf[3] - 0x39      resp[5] = buf[7] + 0x50
+  resp[6] = buf[1] - 0x67      resp[7] = buf[4] + 0xaa
+  ```
+  The "算法" printed in `加密组别22:` is the expected byte at the
+  *first mismatching position* (not necessarily byte 0).
+
+- **g50** is a flat constant compare like g1/g3/g11/g12/g21. NVRAM
+  slot is `fill[184..187]` (LE u32). Algo value `0x00000aa6` is
+  UID-independent.
+
+### C. "g21 was never solved (algo unknown)."
+
+**RESOLVED for UID 0.0.1d.5e.** `g21 algo = 0x4d0b3476`. NVRAM
+slot is `fill[64..67]` (LE u32). Like g1/g11, g21 is
+UID-dependent — different radios will need different values.
+
+### D. "Is `Activa` a kill-switch / non-recoverable command?"
+
+**RESOLVED — no, the old warning was wrong.** Earlier notes said
+"Don't send `Activa` without a correct response sequence. It
+deactivates the radio in a way we can't recover from." This is
+incorrect.
+
+`Activa` accepts arbitrary token + fill bytes and writes them into
+NVRAM at fixed offsets. It does not brick the radio; an incorrect
+fill simply leaves the integrity checks failing on the next boot.
+Verified by sending many `Activa` commands during this session and
+recovering each time.
+
+Full activation payload mapping for UID `0.0.1d.5e` (g1/g11/g21 are
+UID-dependent; g3/g12/g50 and the g22 *formula* are UID-independent):
+
+| `Activa` input        | Maps to NVRAM       | Purpose                                        |
+|-----------------------|---------------------|------------------------------------------------|
+| `token[0..3]`         | g1 storage (LE u32) | `g1 algo = 0x001c0d93`                          |
+| `token[7]`            | g3 storage byte 0   | low byte of `g3 algo = 0x54871eab`              |
+| `fill[0..2]`          | g3 storage bytes 1..3 | high bytes of g3 algo                         |
+| `fill[24..27]`        | g11 storage         | `g11 algo = 0x45589210` LE                      |
+| `fill[28..31]`        | g12 storage         | `g12 algo = 0x00000246` LE (constant)           |
+| `fill[64..67]`        | g21 storage         | `g21 algo = 0x4d0b3476` LE (this UID)           |
+| `fill[68..75]`        | g22 storage (8 B @ `0x7ae04c`) | UID-derived response (see formula above) |
+| `fill[184..187]`      | g50 storage         | `g50 algo = 0x00000aa6` LE (constant)           |
+
+For UID `0.0.1d.5e` (`buf = 00 00 00 00 00 00 1d 5e`), the computed
+g22 response is `12 40 3f d4 c7 ae 99 aa`.
+
+### E. "Is the post-Activa activated state real, or just an artefact
+of patched firmware?"
+
+**RESOLVED — real.** After running `Activa` with the correct
+payload, we flashed **stock vendor V2.0.8 firmware**
+(`firmware/HD-GPS-HD2PA-C7000-V2.0.8-GPS.bin`, no integrity-check
+patch) over the activated NVRAM. Two consecutive `END`-triggered
+reboots showed: zero `加密组别` failure lines, no
+`Radio is not activated` string, full boot init (ADC/DAC/sync
+registers) completing. The activation is intrinsic to NVRAM
+contents, not to the patched firmware.
+
+### F. "GetUID — is the on-wire response the same as the boot-log printf?"
+
+**RESOLVED — no.** Sending `GetUID` over UART at 119200 returns
+**8 bytes**; for this radio: `00 00 00 00 00 00 1d 5e`. The
+boot-log `UID: %x.%x.%x.%x.` printf only renders the trailing 4
+bytes (`0.0.1d.5e.`), but the over-the-wire response is the full
+8 bytes. The 8-byte buffer is the same one g22 reads from
+`0x48350`.

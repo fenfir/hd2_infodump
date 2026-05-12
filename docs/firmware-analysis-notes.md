@@ -1,5 +1,22 @@
 # HD2 Firmware Analysis Notes (v208 primary target)
 
+## 0. macOS disassembly toolchain (2026-05-12)
+
+CSKY V2 disassembly on macOS works via an in-tree
+`binutils-gdb` build (target `csky-elfabiv2`):
+
+```
+binutils-gdb/binutils/objdump -b binary -m csky:ck803 -EL \
+    --adjust-vma=0x03000000 <plaintext.bin>
+```
+
+Brew's stock `objdump` decodes CSKY but does **not** combine 32-bit
+halfword pairs correctly — use the in-tree build for any analysis
+that depends on full-width instruction decoding (e.g. the
+integrity-check function `FUN_0304d564` at `0x0304d564..0x0304d830`,
+documented in [fw_update](fw_update) "Integrity-check fall-through
+patch").
+
 ## 1. KEY-SWAP BUGS — Confirmed bitmap errors
 
 The perword decryption uses a 1-bit/word bitmap to select KEY_N vs KEY_S.

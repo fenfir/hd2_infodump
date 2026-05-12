@@ -9,13 +9,20 @@ All reverse-engineered from USB pcaps of the official Windows CPS
 - Chip: CH340 (VID `0x1A86`, PID `0x7523`).
 - Baud: **119200** 8N1 (non-standard — pyserial on macOS applies via
   `IOSSIOSPEED`; `termios` alone returns EINVAL). Note: the CPS configuration
-  string is `"115200,N,8,1"`, but the CH340 likely maps this to the actual
-  119200 rate internally.
+  string is `"115200,N,8,1"`, but the CH340 maps this to the actual ~119200
+  rate internally. **`120000` also works** on the CH340 (used by the
+  application-firmware debug UART tests in `activa_tests/`) — both rates
+  are interchangeable in practice.
 - No flow control; RTS and DTR driven high locally after open.
 - `/dev/cu.usbserial-*` on macOS; `/dev/tty.usbserial-*` blocks on DCD.
 - **Power cable noise**: plugging in the radio's charging/power cable while
   the USB-serial cable is connected causes massive data corruption (~60–80%
   bad reads). Always unplug the power cable during dumps.
+- **macOS tooling.** `scripts/hd2.py` (sub-commands `getver`, `getuid`)
+  talks to the live app firmware over UART. `activa_tests/lib_radio.py`
+  is the shared serial wrapper used by the test scripts. Default
+  device path is `/dev/cu.usbserial-2140`, overridable via the
+  `HD2_PORT` / `HD2_BAUD` environment variables.
 
 ## Boot behaviour
 
@@ -266,6 +273,65 @@ relative to the loaded baseline; `hd1_codeplug_write.py` does the same
 
 Host sends ASCII `END` (`45 4e 44`). This **reboots the radio** — it is
 not a graceful close; if you want to issue more commands, don't send it.
+
+## `Activa` — radio activation
+
+ASCII keyword `Activa` (`41 63 74 69 76 61`) followed by an 8-byte
+token and 256 bytes of "fill" data. The firmware writes the token
+and fill into NVRAM at fixed offsets, then self-reboots; on the next
+boot the integrity-check function (`FUN_0304d564`, 7 sequential
+checks, see [firmware-summary](firmware-summary) "Encryption /
+boot-time integrity checks") reads those NVRAM slots and either
+passes (radio finishes init normally) or prints
+`加密组别 NN: 算法：%x,读取：%x` per failing group.
+
+`Activa` is fully recoverable: it accepts arbitrary bytes, writes
+them to NVRAM, and reboots. An incorrect payload simply leaves
+checks failing on the next boot; sending another `Activa` with a
+corrected payload recovers the radio.
+
+### Frame (host -> radio, 270 bytes)
+
+```
+[0..5]     "Activa"          (6 B ASCII keyword)
+[6..9]     token[0..3]       -> g1 NVRAM slot (LE u32)
+[10..12]   token[4..6]       -> currently unused / padding
+[13]       token[7]          -> g3 NVRAM byte 0
+[14..269]  fill[0..255]      -> NVRAM fill block
+```
+
+After the radio reads the full frame it triggers an internal reboot
+(no explicit ack). Collect the post-reboot debug stream the same way
+as for `END` — see `activa_tests/lib_radio.py::reboot_and_capture`.
+
+### NVRAM offset table
+
+Authoritative source: `activa_tests/test_38_uid_buf_g22.py`. UID
+`0.0.1d.5e` is shown as the worked example; g1, g11, g21 are
+UID-dependent, the rest are not.
+
+| Input field      | NVRAM destination     | Purpose / algo for UID `0.0.1d.5e`         |
+|------------------|-----------------------|--------------------------------------------|
+| `token[0..3]`    | g1 storage (LE u32)   | `g1 algo = 0x001c0d93`                      |
+| `token[7]`       | g3 storage byte 0     | low byte of `g3 algo = 0x54871eab`          |
+| `fill[0..2]`     | g3 storage bytes 1..3 | high bytes of g3 algo                       |
+| `fill[24..27]`   | g11 storage           | `g11 algo = 0x45589210` LE                  |
+| `fill[28..31]`   | g12 storage           | `g12 algo = 0x00000246` LE (constant)       |
+| `fill[64..67]`   | g21 storage           | `g21 algo = 0x4d0b3476` LE                  |
+| `fill[68..75]`   | g22 storage (8 B @ `0x7ae04c`) | UID-derived 8-byte response (formula in [firmware-summary](firmware-summary)) |
+| `fill[184..187]` | g50 storage           | `g50 algo = 0x00000aa6` LE (constant)       |
+
+For UID `0.0.1d.5e` the computed g22 response is
+`12 40 3f d4 c7 ae 99 aa`.
+
+### Verified on stock firmware
+
+After a successful `Activa`, the **stock vendor V2.0.8 firmware**
+(`firmware/HD-GPS-HD2PA-C7000-V2.0.8-GPS.bin`) was flashed over the
+activated NVRAM. Two consecutive `END` reboots showed zero
+`加密组别` failure lines, no `Radio is not activated` string, and a
+full boot init. The activation is intrinsic to NVRAM contents, not
+to any patched firmware.
 
 ## WriteCommit (`b1=0x0E`) — IARU band limits
 

@@ -124,12 +124,6 @@ the CSV semantics make sense when reverse-engineering settings region.
   `Receive GPS`, `Outgoing` (timed-report), `Missed`, `Answered`,
   `1:1 / 1:2 / 1:3 / 1:4 / Off / Scan` (timing slots).
 - **Channel display mode**: `Channel Mode` vs `Freq Mode`.
-- **Encryption-group debug printf** (firmware-internal, useful for
-  understanding key-table layout): `加密组别 NN: 算法：%x` — i.e.
-  "Encryption group NN: algorithm: %x". Confirms that AES/ARC4 keys at
-  `0x5018` are indexed by a (group, slot) tuple where the group comes
-  from the channel's `Encryption Key` byte. Observed group values in
-  firmware printf list: 21, 22, 50.
 
 ## Encoding-mode confidence notes
 

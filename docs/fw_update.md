@@ -5,7 +5,9 @@
 - **SoC**: HR_C7000 (Dahua DH4570), C-SKY CK803S core, 192 MHz
 - **Flash**: Winbond W25Q512 (64 MB SPI NOR), JEDEC ID `ef 40 20`
 - **Interface**: CH340 USB-to-serial adapter (VID `1a86`, PID `7523`)
-- **Debug UART baud**: 120,000 (application firmware)
+- **Debug UART baud**: 120,000 (application firmware; `119200` also
+  works — the CH340 maps the CPS `"115200,N,8,1"` string to the same
+  rate. See [protocol](protocol) "Serial".)
 - **Firmware update baud**: 57,600 (bootloader)
 - **Line settings**: 8N1
 
@@ -131,98 +133,114 @@ The `.bin` files are **pre-framed YMODEM packets**, not raw flash images:
 | `HD2-FW-V2.0.9-GPS.bin`               | 617,400     | ~606 KB  | GPS     |
 | `HD-GPS-HD2PA-C7000-V2.1.3-GPS.bin`   | 617,400     | ~606 KB  | GPS     |
 
-### Firmware obfuscation — XOR key found
+### Firmware obfuscation — XOR algorithm
 
-The raw payloads (after stripping YMODEM framing) are **XOR-obfuscated** with a
-**word-level (4-byte) XOR cipher** — NOT a simple repeating 4-byte key.
-
-#### Key structure
-
-Two sub-keys alternate based on cycle position:
+The raw payloads (after stripping YMODEM framing) are XOR-encrypted with a
+stateless per-word predicate: `AilunceFW::ApplyXOR` from `radio_tool`,
+ported in `scripts/fw_crypto.py` and `src/fwdb/algorithm.py`:
 
 ```
-key_N = [0x77, 0x77, 0x77, 0x07]  (normal — most positions)
-key_S = [0x11, 0x11, 0x11, 0x01]  (special — ~116 specific positions per cycle)
+def apply_word(w):
+    if w == 0 or w == 0xFFFFFFFF:  return w ^ 0xFFFFFFFF
+    if w & (1 << 28):              return w ^ 0x01111111   # KEY_S
+    return                              w ^ 0x07777777     # KEY_N
 ```
 
-The cipher has a **period of 1844 words (7376 bytes)**. For each 4-byte word at
-file byte offset `i`:
-
-```
-cycle_pos = (i // 4 + phase) % 1844
-key = key_S if cycle_pos in S_SLOTS else key_N
-word[i..i+3] ^= key
-```
-
-> **Note**: An earlier analysis concluded period=922. This was wrong. At word 102466
-> (cp=124 mod 922, an S position), key_N is used; at word 110764 (cp=124 mod 922,
-> also an S position), key_S is used. A 9-cycle gap rules out period=922. With
-> period=1844: word 102466 is cp=1046 (not in S_SLOTS → key_N) and word 110764
-> is cp=124 (in S_SLOTS → key_S). Consistent.
-
-S_SLOTS (~116 positions in the 1844-word cycle that use key_S), empirically derived
-from known-plaintext analysis (POSIX errno strings, RTOS strings, UI labels):
-
-```python
-# first half [0, 921] — 90 positions
-{21, 54, 55, 57, 66, 70, 102, 106, 124, 125, 213, 233, 236, 239, 241, 250,
- 258, 272, 275, 290, 292, 295, 297, 300, 303, 306, 310, 312, 316, 323, 326,
- 328, 329, 336, 339, 356, 370, 372, 375, 484, 487, 495, 498, 503, 509, 514,
- 522, 540, 546, 551, 597, 600, 644, 654, 656, 657, 660, 662, 667, 682, 687,
- 690, 693, 710, 716, 721, 725, 731, 734, 758, 804, 808, 811, 816, 820, 827,
- 830, 847, 848, 851, 852, 857, 859, 864, 866, 872, 877, 880, 885, 902, 903,
- 912, 917}
-
-# second half [922, 1843] — 26 verified positions
-# errno table region (922–1006): fully mapped
-# UI string region (1343–1383): partially mapped
-# positions 1007–1342 and 1384–1843: still under investigation, assumed key_N
-{923, 929, 934, 940, 943, 948, 949, 952, 956, 960, 970, 972, 976, 978, 982,
- 991, 995, 999, 1005, 1006,
- 1343, 1353, 1362, 1364, 1374, 1383}
-```
-
-Authoritative set is in `firmware/decode_fw.py` (`S_SLOTS` frozenset).
-
-#### Phase per firmware file
-
-The cipher starts at a different cycle offset ("phase") per firmware file:
-
-| Firmware file                              | Phase | Status                          |
-|--------------------------------------------|-------|---------------------------------|
-| `HD-HD2PA-C7000-V2.0.7.raw.bin`           | 0     | Confirmed                       |
-| `HD-GPS-HD2PA-C7000-V2.0.8-GPS.raw.bin`   | 0     | Untested (assumed same as V2.0.7) |
-| `HD2-FW-V2.0.9-GPS.raw.bin`               | 0     | Untested (assumed same as V2.0.7) |
-| `HD-GPS-HD2PA-C7000-V2.1.3-GPS.raw.bin`   | 881   | Tentative — confirmed for period=922; needs re-verification with period=1844 |
-
-Phase was determined by known-plaintext crib dragging using the firmware filename
-string embedded near the end of each file. Confirmed strings in V2.0.7 include:
-"Encryption" ×5, "No such file or directory", "Shift Up/Freq", "Encrypt Type/NO",
-"DMR Slot", "Promiscuous", "FM radio", "Target Radio", "Private Call",
-"Radio WakeUp", "Unavailable", "Priority", "Quick Text".
+Symmetric: the same function encrypts and decrypts. No keystream
+period, no position table, no phase. Round-trip vendor `.bin` ->
+plaintext -> vendor `.bin` verified byte-identical against every
+available firmware image.
 
 #### Decode script
 
-Use `firmware/decode_fw.py` — auto-detects phase from filename:
+`scripts/fw_crypto.py` implements the algorithm plus 1K-YMODEM
+framing in one CLI:
 
 ```
-python3 firmware/decode_fw.py <input.raw.bin> <output.dec.bin>
+scripts/fw_crypto.py decrypt INPUT [-o OUT]      # ymodem-unframe + ApplyXOR
+scripts/fw_crypto.py encrypt INPUT [-o OUT] [--frame]
+scripts/fw_crypto.py frame   INPUT [-o OUT]
+scripts/fw_crypto.py unframe INPUT [-o OUT]
+scripts/fw_crypto.py info    INPUT
 ```
 
-Decrypted files in `analysis/` directory:
-- `HD-HD2PA-C7000-V2.0.7.dec.bin`
-- `HD-GPS-HD2PA-C7000-V2.0.8-GPS.dec.bin`  (phase 0, untested)
-- `HD-GPS-HD2PA-C7000-V2.1.3-GPS.dec.bin`
-- `HD2-FW-V2.0.9-GPS.dec.bin`              (phase 0, untested)
+Auto-detects framed vs raw payload by `size % 1029 == 0` + first byte
+`0x02 (STX)`.
 
 **Load base**: `0x03000000` (flash XIP start; the LCSFC hardware maps external
 flash starting at this address). The firmware image itself starts at offset
 `0xd000` within the LCSFC window (VA `0x0300d000`), but Ghidra imports use
 file offset `0x00000000` as the import base — see [Ghidra Import Kit](firmware-ghidra-README).
 
-**Note:** the Ghidra analysis section previously in this document analyzed
-still-encrypted V2.1.3 firmware and is obsolete. See the [Firmware Reverse
-Engineering](firmware-summary) docs for current analysis.
+## Integrity-check fall-through patch
+
+The application firmware contains an integrity-check function
+`FUN_0304d564` (a.k.a. the boot-time "encryption group" check) that
+runs 7 sequential checks against the activation NVRAM block. By
+default the first failing check prints `加密组别 NN: 算法：%x,读取：%x`
+and either inlines a function epilogue or branches to the shared
+epilogue at `0x0304d57a`, which pops the frame and returns early — so
+on an unactivated radio only one `加密组别` line is ever seen.
+
+`scripts/patch_crypto_check.py` patches the plaintext firmware so all
+7 checks print every boot. This was essential for reverse-engineering
+the per-group format strings and the g22 / g50 NVRAM slots.
+
+### Strategy
+
+At each of the 6 non-final failure sites, the first 2 bytes of the
+post-printf cleanup (a `movi r0, 0` at every site, encoded
+`00 30`) are replaced with a **CSKY V2 16-bit `br`** to the entry of
+the next check. The stack frame stays intact (no `addi`/`pop` runs
+along the failure path) and the natural end-of-function epilogue at
+`0x0304d57a` cleans up once when site 7 completes. Site 7 is
+unchanged.
+
+### CSKY V2 16-bit `br` encoding
+
+```
+br <target> placed at PC:
+    disp   = target - PC                   (must be even)
+    hwdisp = disp / 2                      (signed, range [-512, 512))
+    enc    = 0x0400 | (hwdisp & 0x3FF)     (little-endian 16-bit)
+```
+
+### Patch table
+
+Six 2-byte writes, all from `00 30` to `0x04xx`:
+
+| Failure site VA | Next-check VA | Note                |
+|-----------------|---------------|---------------------|
+| `0x0304d5ea`    | `0x0304d5f0`  | check 1 -> check 2  |
+| `0x0304d648`    | `0x0304d65a`  | check 2 -> check 3  |
+| `0x0304d6ae`    | `0x0304d6b2`  | check 3 -> check 4  |
+| `0x0304d700`    | `0x0304d70a`  | check 4 -> check 5  |
+| `0x0304d762`    | `0x0304d7ba`  | check 5 -> check 6  |
+| `0x0304d82c`    | `0x0304d830`  | check 6 -> check 7  |
+
+### Optional version-string bump
+
+The same script can also rewrite the embedded firmware-ID string so
+that `GetVer` reports a distinguishable version (default
+`V3.0.1-GPS.bin`). Two single-byte writes at file offsets `0x06de74`
+and `0x06de78` (the `2` and `7` digits of `V2.0.7-GPS.bin`).
+
+### Outputs
+
+The script emits three files in `firmware/`:
+
+- `PATCHED.decrypted.bin` — plaintext after patch (614,400 B)
+- `PATCHED.encrypted.payload.bin` — `ApplyXOR`-encrypted plaintext
+- `PATCHED.ymodem-framed.bin` — 600 × 1029 B ready for
+  `scripts/fw_flash.py`
+
+Flashed to hardware and verified: all 7 `加密组别` debug lines print
+every boot, the radio completes normal init, and no stack corruption
+is observed.
+
+See also: [firmware-summary](firmware-summary)
+"Encryption / boot-time integrity checks" and [protocol](protocol)
+"`Activa` — radio activation".
 
 ## HR_C7000 Architecture
 

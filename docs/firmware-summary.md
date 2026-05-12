@@ -201,8 +201,57 @@ from newlib defaults.
 
 ### 3.11 Encryption
 
-5 cipher types, menu segment 0 at `0x06df4c`: `Off Normal Enhanced ARC4 AES128 AES256`.
+#### 3.11.1 Channel-level cipher types
+
+Cipher list, menu segment 0 at `0x06df4c`: `Off Normal Enhanced ARC4 AES128 AES256`.
 Channel byte encoding and key storage regions: see [channels](channels) and [settings](settings) encryption sections.
+
+#### 3.11.2 Boot-time integrity checks (`加密组别`, "encryption group")
+
+A separate mechanism from the channel ciphers. On every boot,
+`FUN_0304d564` (the integrity-check function) runs **7** sequential
+checks against values in the activation NVRAM block. A failure prints
+`加密组别 NN: 算法：%x,读取：%x` and (pre-patch) early-returns; if all
+7 pass, the radio finishes initialisation and operates normally.
+
+Format-string offsets in rodata:
+
+| Group | Format-string offset | NVRAM slot (after `Activa`)         | Algo (UID `0.0.1d.5e`) | UID-dependent? |
+|-------|----------------------|-------------------------------------|------------------------|----------------|
+| g1    | `0x71044`            | `token[0..3]` -> LE u32             | `0x001c0d93`           | yes            |
+| g3    | `0x71064`            | `token[7]` + `fill[0..2]` -> LE u32 | `0x54871eab`           | no             |
+| g11   | `0x71084`            | `fill[24..27]` LE u32               | `0x45589210`           | yes            |
+| g12   | `0x710a4`            | `fill[28..31]` LE u32               | `0x00000246`           | no (constant)  |
+| g21   | `0x710c4`            | `fill[64..67]` LE u32               | `0x4d0b3476`           | yes            |
+| g22   | (further on)         | `fill[68..75]` (8 B @ `0x7ae04c`)   | UID-derived (formula)  | yes (formula)  |
+| g50   | (further on)         | `fill[184..187]` LE u32             | `0x00000aa6`           | no (constant)  |
+
+g1, g3, g11, g12, g21, g50 are flat 32-bit constant compares against
+their NVRAM slot. **g22 is different**: it reads 8 bytes from
+`0x7ae04c` (in the activation block) and compares each byte against a
+per-byte transform of the 8-byte chip-UID buffer at `0x48350`
+(disassembly `0x0304d7c4..0x0304d824`; both `puVar2` and
+`DAT_0304d87c` resolve to `0x00048350`):
+
+```
+resp[0] = buf[5] + 0x12      resp[1] = buf[6] + 0x23
+resp[2] = buf[0] + 0x3f      resp[3] = buf[2] - 0x2c
+resp[4] = buf[3] - 0x39      resp[5] = buf[7] + 0x50
+resp[6] = buf[1] - 0x67      resp[7] = buf[4] + 0xaa
+```
+
+The "算法" printed in `加密组别22:` is the expected byte at the
+*first* mismatching position (not necessarily byte 0).
+
+For UID `0.0.1d.5e` (`buf = 00 00 00 00 00 00 1d 5e`), the computed
+g22 response is `12 40 3f d4 c7 ae 99 aa`.
+
+Authoritative payload mapping and Ghidra decompile:
+`scripts/patch_crypto_check.py`,
+`activa_tests/test_38_uid_buf_g22.py`, and
+`assets/crypto_init_decomp.c`. Patch + protocol details:
+[fw_update](fw_update) "Integrity-check fall-through patch" and
+[protocol](protocol) "`Activa` — radio activation".
 
 ### 3.12 Boot / programmer protocol
 
@@ -218,6 +267,15 @@ The version-string oddity (v208 firmware reports "V2.0.7-GPS.bin"
 internally) suggests this filename string is a build-script artifact,
 not a runtime version label. v213 firmware has `…-V2.1.3-GPS.bin` at
 the equivalent offset.
+
+The four ASCII command keywords `END`, `Activa`, `GetUID`, `GetVer`
+are accepted by the application firmware over the debug/CPS UART:
+- `END` — reboot
+- `Activa` — write activation token + fill into NVRAM, self-reboot
+  (recoverable; see [protocol](protocol) "`Activa`")
+- `GetUID` — return 8-byte chip UID (only the trailing 4 bytes show
+  up in the boot-log printf, but the wire response is 8 bytes)
+- `GetVer` — return firmware ID string
 
 ---
 

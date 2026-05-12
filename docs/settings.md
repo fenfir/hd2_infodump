@@ -375,10 +375,6 @@ the radio menu labels this `加密组别` = "encryption group"). Combined,
 the channel resolves to a (region, slot) tuple that picks one specific
 key from the table.
 
-Firmware printf strings also corroborate this layout — the radio's
-debug log emits `加密组别 NN: 算法：%x` ("encryption group NN:
-algorithm: %x") when loading channel encryption settings.
-
 ## Quick Messages (SMS, `table_1dfx` block `0x1DF8` + `0xDC`, 200 bytes × 16 slots)
 
 Pre-written SMS text messages. First slot starts at block offset `0xDC`
