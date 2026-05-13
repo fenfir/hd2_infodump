@@ -246,3 +246,28 @@ Tx-Authority CSV labels); `Medium` / `180S` / `Address Book` /
 `Priority Contacts` / `Send GPS` / `PTT ID` / `DTMF Code` / `GPS Timing`
 (CSV column labels). See `cps-csv-format.md` for the full list and the
 firmware-vs-CSV correspondence.
+## Firmware confirmations (2026-05-13)
+
+Cross-checked against V2.1.3 firmware decompile (`assets/source_v213/` in the
+hd2-clean working tree, run via the pyghidra project at
+`tmp/pyghidra_project/hd2_v213_fixed`).
+
+- **`+0x12` GPS contact index — confirmed sole role.** No firmware path
+  reads this byte for any purpose other than indexing into the contact
+  table when `+0x20 bit 4` (TxGPS) is set.
+- **`+0xAC` Kill Code and `+0xAE` WakeUp Code — encoding confirmed.** The
+  firmware function `dmr_tx_csbk_kill_wakeup` (V2.1.3 VMA `0x0305219c`)
+  reads these two bytes as 1-based contact indices (0 = none) when
+  building the Tier-II remote-disable / remote-wake CSBK. Channels.md's
+  description was already correct.
+- **DMR Slot bit position.** Firmware `dmr_toggle_timeslot` toggles
+  `+0x2A & 0x01` (1 = TS2, 0 = TS1); matches channels.md.
+- **AES sub-variant nibble.** Firmware `channel_cycle_encryption` writes
+  bits 3:4 of `+0x11` as the AES key-slot select (ARC4/AES128/AES256),
+  matching channels.md "Encrypt family + variant" decode.
+- **Inline Rx List.** Firmware grouplist resolver `channel_resolve_grouplist_members`
+  expects 33-entry packed records of 5 bytes each (DMR ID + type byte) when
+  walking flash bank `0x890000`. The per-channel inline list at
+  `+0x30..+0xAF` is a denormalised 4-byte-per-entry view of the same data
+  (CPS writes both forms; the firmware reads the inline form during
+  channel activation via `channel_load_runtime_struct` at `0x03054754`).
