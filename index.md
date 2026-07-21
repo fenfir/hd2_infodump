@@ -41,6 +41,16 @@ radio.
 | [Ghidra Quickstart](docs/firmware-ghidra-quickstart) | Step-by-step Ghidra import, metadata scripts, navigation tips |
 | [Open Questions](docs/firmware-open-questions) | Unresolved codeplug questions vs. firmware analysis status |
 
+## OpenRTX Implementation Notes
+
+Notes from the [OpenRTX](https://openrtx.org/) port to the HD2 (Miosix / CK803S):
+how the reverse-engineered hardware is actually driven, with HW-verified register
+sequences.
+
+| Document | Description |
+|----------|-------------|
+| [Audio — PCM Playback](docs/openrtx-audio) | CPU→speaker codec-DAC path: SAHB PCM bridge, bring-up sequence, the PTB17 path-select bit, and the codec/SOCSYS register reference |
+
 ## Scripts {#scripts}
 
 | Script | Description |
