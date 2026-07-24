@@ -10,13 +10,6 @@ the CK803S core. This chapter covers the device-resident software AMBE+2 codec
 (DMR), the fixed-point codec2 work (M17, encode-only), and the IMA-ADPCM
 voice-prompt player that ships today.
 
-> ⚠️ **This chapter supersedes `docs/ambe_v3000_driver.md` and
-> `docs/vocoder_interface.md`.** Those describe an external HR_V3000 vocoder chip
-> and a UART control protocol that **do not exist on this hardware** — the
-> V_SPI/V_UART nets are unpopulated, `reg 0x06=0x24` (external-vocoder select) is
-> never driven, and no HR_V3000 is placed. Treat any "HW vocoder" guidance there
-> as a dead end.
-
 ## What it is / how it works
 
 **DMR voice = a software AMBE+2 codec on the CK803S.** Established 2026-06-10 by
@@ -144,24 +137,16 @@ tone is only audible while a PCM stream is actively clocking the codec DAC.
 
 ## Gotchas & cautions
 
-- ⚠️ **No HR_V3000, no HW vocoder, no UART vocoder protocol.** Don't implement
-  `reg 0x06=0x24`, the `0x61…A0/A2/39` UART sequence, or any V_SPI driver — those
-  nets are unpopulated. `ambe_v3000_driver.md` / `vocoder_interface.md` are
-  superseded on exactly this point.
-- ⚠️ **codec2 decode fixed-point is a dead end for real-time — do not retry.**
-  Assessed 2026-07-13: zero reusable overlap from the encode `C2_FIXED` work
-  (encode is forward LSP; decode is the inverse `lsp_to_lpc` + `aks_to_mag2` +
-  `synthesise`, ~100% float). BFP realistically yields ~4–8× on this core; the
-  ~40 ms/frame floor is dominated by *integer* FFT/postfilter work, not soft-float,
-  so further libcall removal barely helps. The ~12.7× speedup reached still leaves
-  it ~2.0–2.35× over the 20 ms budget. Off the table.
+- ⚠️ **codec2 decode fixed-point is a dead end for real-time — do not retry**
+  (~40 ms/frame floor, ~2.0–2.35× over the 20 ms budget, dominated by *integer*
+  FFT/postfilter work not soft-float; no reusable overlap with the encode
+  `C2_FIXED` path).
 - ⚠️ **Do not switch voice prompts back to stock codec2 `.vpc`.** It needs the
   decoder (~505 ms/frame float). IMA-ADPCM is the correct, validated choice — its header
   rationale stands.
-- **The vendor `g_beep_seq` GPIOB.28/29 doorbell trigger is a dead end on our
-  firmware.** It works on a vendor radio only because the vendor's uC/OS app tasks
-  consume the request; our OpenRTX image has no hardware listener, so replicating
-  the doorbell is silent. Clip audio is not in the CPU's 4 MB flash window.
+- ⚠️ **The vendor `g_beep_seq` GPIOB.28/29 doorbell trigger is a dead end** — our
+  OpenRTX image has no hardware listener consuming the request, so it's silent;
+  clip audio isn't in the CPU's 4 MB flash window.
 - **AMBE codec: pass the native object base `0x539e4`, not an arbitrary state
   ptr.** The encoder reads/writes hardcoded absolute buffers; an arbitrary ptr is
   silently ignored for internal accesses and encode reads zeros.
@@ -223,7 +208,6 @@ Source docs distilled here:
 - `docs/voice_prompt_map.md` — vendor prompt catalogue / msg_id map (reference).
 - `docs/codec2_ck803s_feasibility_report.md` — full feasibility + budget math.
 - `docs/codec2_fixedpoint_decode_plan.md` — the decode fixed-point campaign log.
-- ⚠️ superseded: `docs/ambe_v3000_driver.md`, `docs/vocoder_interface.md`.
 
 Memory: `hd2-dmr-voice-sw-ambe-codec`, `hd2-codec2-encode-only-vp-adpcm`,
 `hd2-adpcm-voiceprompts-audio-path`.

@@ -32,7 +32,7 @@ The bus roster:
 | Bus | Controller @ | Pins | Slaves |
 |---|---|---|---|
 | I2C1 (radio) | `0x14070000` (DesignWare) | SCL=PTA7, SDA=PTA8 | AT1846S (0xE2 / 7-bit 0x71), RDA5802E (0x20 / 0x10) |
-| I2C2 (RTC) | `0x14080000` (DesignWare, `rtc_hd2.c` + manual 4.12.3; the older `0x04000000` in `i2c_dev_0xE0.md` is superseded) | — | RTC-like timekeeper at 0xE0 (7-bit 0x70) |
+| I2C2 (RTC) | `0x14080000` (DesignWare, `rtc_hd2.c` + manual 4.12.3) | — | RTC-like timekeeper at 0xE0 (7-bit 0x70) |
 | SPI0 (flash) | `0x140A0000` (DW-SSI variant) | SCLK/MOSI/MISO muxed; CS=PTA18 GPIO | W25Q512 SPI-NOR (JEDEC ef4020) |
 | LCD i8080 | `0x12000000` | PTC bus, shared with keypad matrix | ST7735S TFT |
 | UART2 (GPS) | `0x14050000` (DW 16550) | RXD=PTA11, TXD=PTA12 | GPS module, 9600 8N1 |
@@ -159,7 +159,7 @@ neutral `rtc_*` naming.
 - ⚠️ **`DIPLEX2` upper bits (3..18) are write-only.** Use the whole-register
   constants `HD2_DIPLEX2_LCD_I80`/`HD2_DIPLEX2_PTC_GPIO` in
   `platform/targets/HD2/pinmap.h`; never RMW. The old '8' diag op's `~0x7ff00` mask
-  missed CS/RS/WR (bits 3-7) — that dead end wasted the early LCD exploration.
+  missed CS/RS/WR (bits 3-7).
 - ⚠️ **SPI0 FIFOs are 8 deep, NOT the manual's 128.** Bursting >8 silently
   drops frames — symptom is "reads fine, saves silently skipped" (≤8-byte ops
   work, bulk fails). Host-paced probes can't catch it (FIFO drains between

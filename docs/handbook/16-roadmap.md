@@ -58,7 +58,7 @@ touchpoints (`kernel/lock.h` no-PendSV yield, `kernel/thread.cpp`)
 need to survive review. `tmp/miosix_modern_port_spec.md` is the layout spec.
 
 **DMR AMBE voice** — 🟡 TX PHY done, voice codec in bring-up. Wide-4FSK DMR TX works
-on air ([DMR TX](06-dmr-tx), [voice codecs](07-voice-codecs)); the software AMBE+2 codec (no external HR_V3000) is bringing up in
+on air ([DMR TX](06-dmr-tx), [voice codecs](07-voice-codecs)); the software AMBE+2 codec is bringing up in
 `dmr_HD2.{cpp,h}`. **Blocker: full voice not yet integrated/verified**; the codec is
 fixed-point-native (per-harmonic mantissa/exponent, direct oscillator sum) so it does
 *not* hit codec2's small-bin FFT wall.

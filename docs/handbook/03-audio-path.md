@@ -129,26 +129,12 @@ space tone is rolled off to nothing.
   `0x38000007` read-back value is ⚠️ unverified — it is not found in any source
   and conflicts with the read-as-zero behavior; the only `0x38000000` constant in
   the RE notes belongs to `DIPLEX1`, not `DIPLEX0`.)
-- ⚠️ **Dead end — the codec is NOT the 2-way FM audio path.** The 2026-06-01
-  model (AT1846S FM audio flows line-in → codec ADC → DAC → lineout) was
-  falsified by live kill-tests: codec DAC soft-mute (`0x160009cd`) does *nothing*
-  to playing FM audio; PTB10 HIGH stops it. FM RX is analog-direct. Any recipe
-  poking the codec mixer for FM RX is moot.
+- ⚠️ **Dead end — the codec is NOT the 2-way FM audio path** (falsified by live kill-tests; FM RX is analog-direct). Don't poke the codec mixer for FM RX.
 - ⚠️ **Dead end — the codec internal AGC/mixer (`0x160009EF`/`0x160009F0`,
   `mixdacl_sel`/`mixadcl_sel`) is left at reset** for both FM and DMR. Don't
   configure it.
-- ⚠️ **Dead end — `work_mode 0x11000100` bit7 (0x80) is the FM *modulator/TX*
-  bit, not RX.** An earlier port set it for FM RX; the vendor FM-RX value is
-  `0x22`, with the modem RX-audio gate `af_gate 0x1100039c = 0x800`. (Note: on a
-  live vendor unit playing FM the observed `work_mode` was `0x6e` — the "0x22 vs
-  0x80" debate is about the RX-audio-gate model, since analog FM does not need
-  the modem at all.) `af_gate` bit16 (`0x1007f` vs `0x7f`) self-clears.
-- ⚠️ **The DMR-voice-RX modem PCM engine is a separate subsystem, not a poke.**
-  Driving the full vendor FM-RX register state (dac_control `0x11000070`,
-  adc_control `0x11000074`, af_gate) onto the radio did not produce demod audio
-  through the codec — `pcm_mode` won't latch and modem RX state `0x11000398`
-  reads 0 (FSM unclocked). This only matters for the codec-leg RX paths; analog
-  FM RX is unaffected.
+- ⚠️ **Dead end — `work_mode 0x11000100` bit7 (0x80) is the FM modulator/TX bit, not RX**; don't set it for FM RX (analog FM needs no modem).
+- ⚠️ **Dead end — the DMR-voice-RX modem PCM engine is a separate subsystem, not a register poke**; driving the vendor FM-RX register state onto the radio won't clock it (`pcm_mode` won't latch). Analog FM RX is unaffected.
 
 ## Where the code lives
 

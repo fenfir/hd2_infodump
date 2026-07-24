@@ -103,27 +103,16 @@ region (~byte 11–27, ~0.1 s into the frame) fails FCS.
   legitimately uses `0x40c6` — but it kills a tone.) Use `0x4046`.
 - **⚠️ padrv reg `0x0A = 0x7C20`, never `0x7820`.** The `0x7820` (missing-pga-bit)
   value kills the carrier.
-- **⚠️ Dead end — CPU-PCM into the FM modulator does not exist.** Every attempt to
-  inject samples via modem TX-RAM (`0x16000030`, `voice_path 0x11000080` bit0=1)
-  or codec DAC playback (`0x180000a0`, `pcm_mode=3`) either breaks the carrier
-  (reconfigures the modem mux into DMR-vocoder topology) or leaves it unmodulated.
-  Vendor RE: those buffers have zero xrefs for FM TX; the only TX-RAM user is the
-  analog repeater relay, and *there* the samples come from the hardware RX
-  recording engine, not the CPU. Don't retry the SAHB/TX-RAM PCM path.
-- **⚠️ Dead end — vec-0x3c / HD2_IRQ_PCM_CAP ISR capture for RX.** Driving RX
-  capture from the PCM-capture ISR **reliably faults the radio** → WDT
-  warm-reboot; it races the modem's own use of that vector during FM-RX.
-  Ack-first ordering did not stabilize it. Parked at
-  `tmp/aprs_rx_isr_capture_wip.patch` — do NOT re-flash. Use the stable
-  blind-sleep capture.
-- **⚠️ Dead end — PLL-gain / majority-vote demod tuning on marginal audio.** A
-  full DPLL gain sweep (1.0…0.05), majority voting, longer correlators (N=10–20),
-  twist correction, and pre-emphasis were all tried on real captures and none
-  beat the firmware's hard-reset PLL; majority vote made it *worse*. The blocker
-  is early bit-*deletions* at the preamble→data boundary, which gain tweaks can't
-  recover, and marginal/variable signal (space-tone deficit: correlator reads
-  83–91% MARK vs expected ~49%). Fix the RF link / discriminator centering first,
-  not the PLL.
+- **⚠️ Dead end — CPU-PCM into the FM modulator does not exist.** Don't retry the
+  SAHB/TX-RAM PCM path (modem TX-RAM `0x16000030`, codec DAC `0x180000a0`) — it
+  either breaks the carrier or leaves it unmodulated.
+- **⚠️ Dead end — vec-0x3c / HD2_IRQ_PCM_CAP ISR capture for RX** reliably faults
+  the radio → WDT reboot (races the modem's use of that vector); use the stable
+  blind-sleep capture. Do NOT re-flash `tmp/aprs_rx_isr_capture_wip.patch`.
+- **⚠️ Dead end — PLL-gain / majority-vote demod tuning on marginal audio** doesn't
+  beat the firmware's hard-reset PLL (majority vote made it worse); the blocker is
+  early bit-deletions at the preamble→data boundary. Fix the RF link / discriminator
+  centering first, not the PLL.
 - **Frequency offset:** the old hardcoded ~+12.5 kHz FM-TX "fudge" is **gone** from
   `hd2_fm_tx_key` (`radio_HD2.cpp`) — it now calls `at1846s.setFrequency(txFreq)`
   raw, and residual synth error is deferred to a proper per-band/per-radio

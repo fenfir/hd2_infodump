@@ -115,10 +115,8 @@ Firmware ID `V4.0.3-GPS.bin` confirms the patched image is loaded.
   every word, so plaintext flashes as garbage (symptom: "Programming Completed
   Successfully" then dead silence, `bad probe: b''`). Full recipe in the
   [boot & flash chapter](02-boot-flash-pipeline).
-- **DBGSHELL v2 was a dead end for pylunce coexistence.** ⚠️ The v2 GetVer hijack's
-  5 s post-reply read swallowed the leading `0x68` of pylunce's codeplug frames
-  (219/347 packets then timeout). Don't reuse the GetVer hijack — v3's bare-`'V'`
-  hijack is the fix.
+- ⚠️ **DBGSHELL v2 was a dead end for pylunce coexistence** — the GetVer hijack
+  swallows pylunce's codeplug frames; use v3's bare-`'V'` hijack instead.
 - **Don't reset GPIO from `jump_to_iap`.** Overzealously clearing peripheral bits
   before `Z` clears state the IAP needs for DFU key detection; if `Z` "disconnects
   and probes go bad" that's the regression. The IAP does its own init.

@@ -90,9 +90,7 @@ swapped transiently around keypad scans (`keyboard_HD2.c`).
 
 ⚠️ The earlier map had WR and CS swapped (WR=bit3, CS=bit5) — it strobed CS and
 held WR high, the panel never latched, permanent white screen. Do not revert to
-it. (The vendor-firmware RE doc `docs/lcd_driver.md` still labels bit3 as WR
-and bit5 as CS/CSB; the OpenRTX corrected map above is the live-verified one —
-see the claims list.)
+it.
 
 ### Backlight PWM chain (vendor `pwm_channel_start @ 0x03059d20`)
 

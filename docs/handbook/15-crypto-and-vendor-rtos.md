@@ -126,7 +126,7 @@ OS_SEM (40 B) — `Type @ +0x00` (`'SEMA' = 0x53454d41`), `NamePtr @ +0x04`,
   only really does AES + RC4/Basic-Privacy.
 - ⚠️ **Manual §5.1.1 says the EP keystream lands at modem RAM `0x495..0x4af` —
   this firmware never writes there.** Ciphertext goes to modem RAM `0x30`. The
-  C7000+V3000 die uses a flatter RAM map than the published HR_C6000 spec.
+  C7000 die uses a flatter RAM map than the published HR_C6000 spec.
 - ⚠️ **The previous fingerprint scan's S-box at `0x0306f2d8` is the IAP copy**
   (VMA `0x0326f2d8` minus IAP base), not the app's. The app dereferences the
   BOOTROM copy at runtime. Three in-image sbox copies exist (app/IAP/BOOTROM);

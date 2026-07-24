@@ -123,10 +123,8 @@ diag op. The app baud and bootloader baud are both **57600** here.
   radio (warm reboot on op entry). A 96 B local is fine; ~400+ B overflows. Make big buffers in
   diag/decoder paths **static**, not stack-local.
 - ⚠️ **Dead end: there is no modem-firmware loader.** The HR_C7000 "modem" is a fixed-function
-  hardware peripheral, not a second CPU — no boot-time blob upload exists. Don't hunt for
-  `modem_firmware_load` / `g_modem_firmware_blob`; they have no referent. The only writer of the
-  `0x16000000` aperture (`hrc7000_modem_buf_write @ 0x03258a24`) stages 36-byte DMR voice bursts,
-  not firmware.
+  hardware peripheral, not a second CPU — no boot-time blob upload exists; don't hunt for
+  `modem_firmware_load` / `g_modem_firmware_blob` (no referent).
 - ⚠️ **Vendor stock firmware does NOT go through the TUI.** `firmware/HD-GPS-…V2.1.3*.bin` flashes
   via `scripts/fw_flash.py` directly — the TUI assumes the post-flash app speaks our binary loader
   protocol.
