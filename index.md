@@ -51,6 +51,35 @@ sequences.
 |----------|-------------|
 | [Audio — PCM Playback](docs/openrtx-audio) | CPU→speaker codec-DAC path: SAHB PCM bridge, bring-up sequence, the PTB17 path-select bit, and the codec/SOCSYS register reference |
 
+## Developer Handbook
+
+A structured, HW-verified developer handbook for building firmware features on the
+HD2 (HR_C7000 SoC, CK803S / C-SKY V2 core). Sixteen chapters distilling the
+reverse-engineering effort into "how it works → how to implement it → gotchas →
+where the code lives", plus a reverse-engineering methodology appendix. Status
+legend: ✅ HW-verified · 🟡 in-progress · ⚠️ dead-end/superseded.
+
+**Start at the [Handbook Home / Table of Contents](docs/handbook/).**
+
+| Chapter | Description |
+|---------|-------------|
+| [01. The HD2 at a glance](docs/handbook/01-device-at-a-glance) | SoC, chip roster, memory map, peripheral inventory |
+| [02. Boot, IAP & build→flash](docs/handbook/02-boot-flash-pipeline) | Boot flow, IAP, the Docker build → encrypt/frame → DFU pipeline |
+| [03. Audio path & routing](docs/handbook/03-audio-path) | PTB17 path-select, codec-DAC PCM, analog-direct FM routing |
+| [04. FM analog (AT1846S)](docs/handbook/04-fm-analog) | Two-way FM RX/TX, CTCSS/DCS/squelch/VOX/DTMF, RSSI, PTT |
+| [05. FM broadcast (RDA5802E)](docs/handbook/05-fm-broadcast) | Broadcast-FM tuner (branch feature, not yet merged) |
+| [06. DMR TX (4FSK)](docs/handbook/06-dmr-tx) | Autonomous modem TDMA engine, slot arm, TX-RAM path |
+| [07. Voice codecs & prompts](docs/handbook/07-voice-codecs) | Software AMBE+2, codec2, IMA-ADPCM voice prompts |
+| [08. M17 TX](docs/handbook/08-m17-tx) | Native 4FSK PHY via the FM-modulator baseband pump |
+| [09. APRS (AFSK)](docs/handbook/09-aprs) | 1200-baud Bell-202 over the analog carrier |
+| [10. Buses & peripherals](docs/handbook/10-buses-peripherals) | HW I2C1, SPI0/W25Q, i8080 LCD, keypad, GPS, power/ADC |
+| [11. Display, UI & codeplug](docs/handbook/11-display-ui-codeplug) | ST7735S, screen renderer, menu tree, channel/codeplug records |
+| [12. Kernel (CK803S / Miosix)](docs/handbook/12-kernel-cskyv2) | Exception model, PendSV-drain fix, tickless timer, context switch |
+| [13. OpenRTX port layout](docs/handbook/13-openrtx-port-layout) | Device-layer map, OpModes, convergence & upstreaming |
+| [14. RE pipeline & debugging](docs/handbook/14-re-pipeline) | Ghidra decompile, labels, clean-room, DBGSHELL/TUI live debug |
+| [15. Crypto & vendor RTOS](docs/handbook/15-crypto-and-vendor-rtos) | Firmware keystream, AES, activation, uC/OS-III reference |
+| [16. Roadmap & open problems](docs/handbook/16-roadmap) | Built-but-unfinished work and the current blockers |
+
 ## Scripts {#scripts}
 
 | Script | Description |
